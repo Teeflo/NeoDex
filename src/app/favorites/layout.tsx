@@ -1,8 +1,9 @@
 import { Metadata } from 'next';
+import { t } from '@/lib/server-i18n';
 
 export const metadata: Metadata = {
-  title: "My Favorites — Pokédex",
-  description: "View and manage your personal collection of favorite Pokémon.",
+  title: t('meta.favorites_title'),
+  description: t('meta.favorites_description'),
 };
 
 export default function FavoritesLayout({

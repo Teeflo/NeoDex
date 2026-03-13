@@ -17,7 +17,7 @@ import {
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -66,8 +66,8 @@ export default function TypesPage() {
           <div className="inline-block p-4 bg-primary/10 rounded-3xl border border-primary/20 mb-6">
             <Target className="w-10 h-10 text-primary" />
           </div>
-          <h2 className="text-5xl font-black tracking-tight mb-2 uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">Type Master</h2>
-          <p className="text-foreground/40 font-bold uppercase tracking-widest text-sm">{t('detail.master_elements') || 'Master the elements and conquer every battle'}</p>
+          <h2 className="text-5xl font-black tracking-tight mb-2 uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">{t('types_page.title')}</h2>
+          <p className="text-foreground/40 font-bold uppercase tracking-widest text-sm">{t('types_page.subtitle')}</p>
         </section>
 
         <div className="grid lg:grid-cols-12 gap-8">
@@ -78,7 +78,7 @@ export default function TypesPage() {
                 <div className="p-2 bg-secondary/30 rounded-xl">
                   <Flame className="w-5 h-5 text-foreground/60" />
                 </div>
-                Select Type
+                {t('types_page.select_type')}
               </h3>
               
               <div className="grid grid-cols-2 gap-2">
@@ -94,7 +94,7 @@ export default function TypesPage() {
                     )}
                   >
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TYPE_COLORS[type] }} />
-                    <span className="text-[10px] font-black uppercase tracking-wider">{type}</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider">{t(`types.${type}`)}</span>
                   </button>
                 ))}
               </div>
@@ -127,8 +127,8 @@ export default function TypesPage() {
                         <Zap className="w-8 h-8 fill-current" />
                       </div>
                       <div>
-                        <h3 className="text-4xl font-black capitalize tracking-tight">{selectedType}</h3>
-                        <p className="text-foreground/40 font-bold uppercase tracking-widest text-[10px]">Elemental Mastery</p>
+                        <h3 className="text-4xl font-black capitalize tracking-tight">{t(`types.${selectedType}`)}</h3>
+                        <p className="text-foreground/40 font-bold uppercase tracking-widest text-[10px]">{t('types_page.elemental_mastery')}</p>
                       </div>
                     </div>
 
@@ -136,12 +136,12 @@ export default function TypesPage() {
                       {/* Offensive strengths */}
                       <div className="space-y-4">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500/60 flex items-center gap-2">
-                          <Sword className="w-3 h-3" /> Strong Against
+                          <Sword className="w-3 h-3" /> {t('types_page.strong_against')}
                         </h4>
                         <div className="flex flex-wrap gap-2">
-                          {typeRels?.damage_relations.double_damage_to.map(t => (
-                            <div key={t.name} className="px-3 py-1.5 rounded-xl bg-yellow-500/5 border border-yellow-500/10 text-[10px] font-black uppercase" style={{ color: TYPE_COLORS[t.name] }}>
-                              {t.name}
+                          {typeRels?.damage_relations.double_damage_to.map(t_rel => (
+                            <div key={t_rel.name} className="px-3 py-1.5 rounded-xl bg-yellow-500/5 border border-yellow-500/10 text-[10px] font-black uppercase" style={{ color: TYPE_COLORS[t_rel.name] }}>
+                              {t(`types.${t_rel.name}`)}
                             </div>
                           ))}
                         </div>
@@ -150,17 +150,17 @@ export default function TypesPage() {
                       {/* Defensive strengths */}
                       <div className="space-y-4">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-green-500/60 flex items-center gap-2">
-                          <ShieldCheck className="w-3 h-3" /> Resists
+                          <ShieldCheck className="w-3 h-3" /> {t('types_page.resists')}
                         </h4>
                         <div className="flex flex-wrap gap-2">
-                          {typeRels?.damage_relations.half_damage_from.map(t => (
-                            <div key={t.name} className="px-3 py-1.5 rounded-xl bg-green-500/5 border border-green-500/10 text-[10px] font-black uppercase" style={{ color: TYPE_COLORS[t.name] }}>
-                              {t.name}
+                          {typeRels?.damage_relations.half_damage_from.map(t_rel => (
+                            <div key={t_rel.name} className="px-3 py-1.5 rounded-xl bg-green-500/5 border border-green-500/10 text-[10px] font-black uppercase" style={{ color: TYPE_COLORS[t_rel.name] }}>
+                              {t(`types.${t_rel.name}`)}
                             </div>
                           ))}
-                          {typeRels?.damage_relations.no_damage_from.map(t => (
-                            <div key={t.name} className="px-3 py-1.5 rounded-xl bg-blue-500/5 border border-blue-500/10 text-[10px] font-black uppercase text-blue-400">
-                              {t.name} (Immune)
+                          {typeRels?.damage_relations.no_damage_from.map(t_rel => (
+                            <div key={t_rel.name} className="px-3 py-1.5 rounded-xl bg-blue-500/5 border border-blue-500/10 text-[10px] font-black uppercase text-blue-400">
+                              {t(`types.${t_rel.name}`)} ({t('types_page.immune')})
                             </div>
                           ))}
                         </div>
@@ -175,7 +175,7 @@ export default function TypesPage() {
                     <div className="p-2 bg-primary/10 rounded-xl">
                       <Star className="w-5 h-5 text-primary" />
                     </div>
-                    Emblematic Pokémon
+                    {t('types_page.emblematic')}
                   </h3>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -196,7 +196,7 @@ export default function TypesPage() {
                             />
                           </div>
                           <span className="font-black capitalize text-base group-hover:text-primary transition-colors">{p.name}</span>
-                          <span className="text-[10px] font-bold text-foreground/40 mt-1 uppercase tracking-widest">BST: {p.pokemon_v2_pokemonstats.reduce((s, curr) => s + curr.base_stat, 0)}</span>
+                          <span className="text-[10px] font-bold text-foreground/40 mt-1 uppercase tracking-widest">{t('detail.total')}: {p.pokemon_v2_pokemonstats.reduce((s, curr) => s + curr.base_stat, 0)}</span>
                         </div>
                       </Link>
                     ))}
@@ -207,7 +207,7 @@ export default function TypesPage() {
                 <div className="glass-panel p-8 rounded-[3rem] bg-primary/5 border-primary/10">
                   <h3 className="text-xl font-black mb-4 flex items-center gap-2">
                     <Info className="w-5 h-5 text-primary" />
-                    Strategic Tips for {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} types
+                    {t('types_page.tips_title', { type: t(`types.${selectedType}`) })}
                   </h3>
                   <div className="space-y-4">
                     <div className="flex gap-4 p-4 rounded-2xl bg-background/40 border border-white/5">
@@ -215,7 +215,10 @@ export default function TypesPage() {
                         <ShieldAlert className="w-4 h-4 text-red-500" />
                       </div>
                       <p className="text-xs text-foreground/60 leading-relaxed">
-                        Watch out for <strong>{typeRels?.damage_relations.double_damage_from.map(t => t.name).join(', ')}</strong> moves. These will deal double damage to your {selectedType} Pokémon.
+                        {t('types_page.watch_out', { 
+                          types: typeRels?.damage_relations.double_damage_from.map(t_rel => t(`types.${t_rel.name}`)).join(', '),
+                          type: t(`types.${selectedType}`)
+                        })}
                       </p>
                     </div>
                     <div className="flex gap-4 p-4 rounded-2xl bg-background/40 border border-white/5">
@@ -223,7 +226,10 @@ export default function TypesPage() {
                         <Sword className="w-4 h-4 text-blue-500" />
                       </div>
                       <p className="text-xs text-foreground/60 leading-relaxed">
-                        Your {selectedType} moves are not very effective against <strong>{typeRels?.damage_relations.half_damage_to.map(t => t.name).join(', ')}</strong>. Try to switch or use coverage moves!
+                        {t('types_page.not_effective', { 
+                          type: t(`types.${selectedType}`),
+                          types: typeRels?.damage_relations.half_damage_to.map(t_rel => t(`types.${t_rel.name}`)).join(', ')
+                        })}
                       </p>
                     </div>
                   </div>
@@ -236,3 +242,4 @@ export default function TypesPage() {
     </div>
   );
 }
+

@@ -1,37 +1,43 @@
 import type { Metadata } from "next";
-import { Nunito, Geist } from "next/font/google";
+import { Manrope, Space_Grotesk } from "next/font/google";
 import Providers from "./providers";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Agentation } from "agentation";
+import { t } from '@/lib/server-i18n';
+import { AppContent } from "./AppContent";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
-const mainFont = Nunito({
-  weight: ["400", "600", "700", "800"],
-  variable: "--font-main",
+const displayFont = Space_Grotesk({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-display",
+});
+
+const bodyFont = Manrope({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-body",
 });
 
 export const metadata: Metadata = {
-  title: "Pokédex — Explore All Pokémon | Generation 1-9",
-  description: "A beautiful, premium neumorphic Pokédex. Explore, search, and filter all Pokémon from Generation 1 to 9 with detailed stats, evolutions, and variations.",
-  keywords: ["Pokédex", "Pokémon", "PokeAPI", "Pokedex", "Pokemon", "Digital Pokédex", "Next.js", "Soft UI", "Team Builder", "Pokemon Quiz", "Competitive Pokemon"],
-  authors: [{ name: "Ultra Pokédex Team" }],
+  title: t("meta.title"),
+  description: t("meta.description"),
+  keywords: t("meta.keywords", { returnObjects: true }) as unknown as string[],
+  authors: [{ name: t("meta.author") }],
   robots: {
     index: true,
     follow: true,
   },
   openGraph: {
-    title: "Pokédex — Explore All Pokémon",
-    description: "Discover every Pokémon with our beautiful neumorphic Pokédex. Stats, types, evolutions and more.",
+    title: t("meta.og_title"),
+    description: t("meta.og_description"),
     type: "website",
-    siteName: "Ultra Pokédex",
+    siteName: t("meta.site_name"),
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pokédex — Explore All Pokémon",
-    description: "Explore the world of Pokémon with our sleek soft-UI Pokédex.",
+    title: t("meta.twitter_title"),
+    description: t("meta.twitter_description"),
   },
   icons: {
     icon: "/icon.svg",
@@ -39,16 +45,14 @@ export const metadata: Metadata = {
   }
 };
 
-import { AppContent } from "./AppContent";
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
-      <body className={`${mainFont.variable} antialiased bg-background text-foreground font-main`}>
+    <html lang="en" suppressHydrationWarning className={cn("font-body", displayFont.variable, bodyFont.variable)}>
+      <body className="antialiased bg-background text-foreground font-body">
         <Providers>
           <AppContent>
             {children}

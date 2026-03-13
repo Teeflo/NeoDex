@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { PokemonDetail } from '@/types/pokemon';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/lib/i18n';
 import { usePokedexStore } from '@/store/pokedex';
 import { toast } from 'sonner';
 import { useSearchParams } from 'next/navigation';
@@ -98,16 +98,20 @@ function QuizPageContent() {
   const [isDaily, setIsDaily] = useState(false);
   const [dailyIndex, setDailyIndex] = useState(0);
   
-  const { t } = useTranslation();
-  const { quizHighScores, updateQuizHighScore, addBadge, badges } = usePokedexStore();
+  const { t, i18n } = useTranslation();
+  const { language, systemLanguage, quizHighScores, updateQuizHighScore, addBadge, badges } = usePokedexStore();
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(timer);
   }, []);
 
+  const resolvedLang = mounted 
+    ? (language === 'auto' ? systemLanguage : language) 
+    : i18n.language || 'en';
+
   const { data: allNames } = useQuery({
-    queryKey: ['allPokemonNames'],
+    queryKey: ['allPokemonNames', resolvedLang],
     queryFn: getAllPokemonNames,
     staleTime: 30 * 60 * 1000,
   });
@@ -135,13 +139,13 @@ function QuizPageContent() {
           setOptions([targetPokemon, ...otherOptions].sort(() => Math.random() - 0.5));
           setGameState('playing');
         } catch {
-          toast.error("Failed to load targeted quiz");
+          toast.error(t('quiz.fetch_failed'));
           setGameState('idle');
         }
       };
       startTargetQuiz();
     }
-  }, [mounted, targetPokemon, allNames, gameState]);
+  }, [mounted, targetPokemon, allNames, gameState, t]);
 
   const getNextPokemon = useCallback(() => {
     const pool = filteredPool.length > 0 ? filteredPool : (allNames || []);
@@ -217,7 +221,7 @@ function QuizPageContent() {
     }
 
     if (pool.length < 4) {
-      toast.error("Not enough Pokémon in this category!");
+      toast.error(t('quiz.not_enough'));
       setGameState('idle');
       return;
     }
@@ -279,7 +283,7 @@ function QuizPageContent() {
       if (targetPokemon) {
         setTimeout(() => {
           setGameState('finished');
-          toast.success('Knowledge verified!');
+          toast.success(t('quiz.targeted_finish'));
         }, 1500);
       } else {
         setTimeout(startNewRound, 1500);
@@ -355,7 +359,7 @@ function QuizPageContent() {
                     </div>
                     <h3 className="text-3xl font-black">{t('quiz.game_over')}</h3>
                     <p className="text-xl font-bold text-foreground/60">
-                      {isDaily ? 'Daily Challenge Score' : t('quiz.final_score')} 
+                      {isDaily ? t('quiz.daily_score') : t('quiz.final_score')} 
                       <span className="text-primary text-2xl ml-2">{score}</span>
                     </p>
                   </div>
@@ -367,25 +371,25 @@ function QuizPageContent() {
                   className="w-full h-20 rounded-2xl font-black uppercase tracking-widest text-lg bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 border-none shadow-xl shadow-orange-500/20 gap-3"
                 >
                   <Calendar className="w-6 h-6" />
-                  Daily Challenge
+                  {t('quiz.daily')}
                 </Button>
 
                 {/* Filters */}
                 <div className="space-y-6 bg-secondary/20 p-6 rounded-[2rem] border border-white/5 text-center">
                   <div className="flex items-center gap-2 mb-4 justify-center">
                     <Filter className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-black uppercase tracking-widest text-foreground/60">Customize your challenge</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-foreground/60">{t('quiz.customize')}</span>
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2 text-left">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 ml-2">Generation</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 ml-2">{t('filters.generation')}</p>
                       <select 
                         value={selectedGen || ''} 
                         onChange={(e) => setSelectedGen(e.target.value || null)}
                         className="w-full h-12 rounded-xl bg-background/50 border border-white/10 px-4 text-sm font-bold appearance-none cursor-pointer focus:border-primary/50 transition-colors"
                       >
-                        <option value="">All Generations</option>
+                        <option value="">{t('quiz.all_generations')}</option>
                         {GENERATIONS.map(gen => (
                           <option key={gen.id} value={gen.id}>{gen.name}</option>
                         ))}
@@ -393,13 +397,13 @@ function QuizPageContent() {
                     </div>
 
                     <div className="space-y-2 text-left">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 ml-2">Type</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 ml-2">{t('filters.types')}</p>
                       <select 
                         value={selectedType || ''} 
                         onChange={(e) => setSelectedType(e.target.value || null)}
                         className="w-full h-12 rounded-xl bg-background/50 border border-white/10 px-4 text-sm font-bold appearance-none cursor-pointer focus:border-primary/50 transition-colors"
                       >
-                        <option value="">All Types</option>
+                        <option value="">{t('quiz.all_types')}</option>
                         {TYPES.map(type => (
                           <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
                         ))}
@@ -410,9 +414,9 @@ function QuizPageContent() {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {[
-                    { id: 'classic' as QuizChallenge, name: 'Classic', icon: <Gamepad2 className="w-5 h-5" />, desc: 'Show image' },
-                    { id: 'silhouette' as QuizChallenge, name: 'Silhouette', icon: <EyeOff className="w-5 h-5" />, desc: 'Who\'s that?' },
-                    { id: 'stats' as QuizChallenge, name: 'Stats', icon: <BarChart3 className="w-5 h-5" />, desc: 'Base stats' }
+                    { id: 'classic' as QuizChallenge, name: t('quiz.classic'), icon: <Gamepad2 className="w-5 h-5" />, desc: t('quiz.classic_desc') || 'Show image' },
+                    { id: 'silhouette' as QuizChallenge, name: t('quiz.silhouette'), icon: <EyeOff className="w-5 h-5" />, desc: t('quiz.silhouette_desc') || 'Who\'s that?' },
+                    { id: 'stats' as QuizChallenge, name: t('quiz.stats_mode'), icon: <BarChart3 className="w-5 h-5" />, desc: t('quiz.stats_desc') || 'Base stats' }
                   ].map((mode) => (
                     <Button 
                       key={mode.id}
@@ -436,7 +440,7 @@ function QuizPageContent() {
                   >
                     <div className="flex items-center gap-2">
                       <Timer className="w-4 h-4" />
-                      Time Attack (30s)
+                      {t('quiz.time_attack')} (30s)
                     </div>
                   </Button>
 
@@ -447,7 +451,7 @@ function QuizPageContent() {
                   >
                     <div className="flex items-center gap-2">
                       <Heart className="w-4 h-4" />
-                      Survival (3 Lives)
+                      {t('quiz.survival')} (3 {t('quiz.lives')})
                     </div>
                   </Button>
                 </div>
@@ -455,15 +459,15 @@ function QuizPageContent() {
                 {quizHighScores && (
                   <div className="pt-8 border-t border-white/10 grid grid-cols-3 gap-4">
                     <div className="text-center">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-1">Classic</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-1">{t('quiz.classic')}</p>
                       <p className="text-xl font-black text-primary">{quizHighScores.classic}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-1">Silhouette</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-1">{t('quiz.silhouette')}</p>
                       <p className="text-xl font-black text-primary">{quizHighScores.silhouette}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-1">Stats</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-1">{t('quiz.stats_mode')}</p>
                       <p className="text-xl font-black text-primary">{quizHighScores.stats}</p>
                     </div>
                   </div>
@@ -479,15 +483,15 @@ function QuizPageContent() {
               >
                 <h3 className="text-xl font-black flex items-center justify-center gap-2">
                   <Trophy className="w-5 h-5 text-yellow-500" />
-                  Your Achievements
+                  {t('quiz.achievements')}
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
-                    { id: 'quiz-novice', name: 'Novice', icon: <Gamepad2 />, desc: 'Score 10 in Marathon' },
-                    { id: 'quiz-master', name: 'Master', icon: <Trophy />, desc: 'Score 50 in Marathon' },
-                    { id: 'speed-demon', name: 'Speed Demon', icon: <Zap />, desc: 'Score 100 in Time Attack' },
-                    { id: 'eagle-eye', name: 'Eagle Eye', icon: <EyeOff />, desc: 'Score 20 in Silhouette' },
-                    { id: 'professor', name: 'Professor', icon: <BrainCircuit />, desc: 'Score 20 in Stats Quiz' },
+                    { id: 'quiz-novice', name: t('quiz.badge_novice'), icon: <Gamepad2 />, desc: t('quiz.badge_novice_desc') },
+                    { id: 'quiz-master', name: t('quiz.badge_master'), icon: <Trophy />, desc: t('quiz.badge_master_desc') },
+                    { id: 'speed-demon', name: t('quiz.badge_speed_demon'), icon: <Zap />, desc: t('quiz.badge_speed_demon_desc') },
+                    { id: 'eagle-eye', name: t('quiz.badge_eagle_eye'), icon: <EyeOff />, desc: t('quiz.badge_eagle_eye_desc') },
+                    { id: 'professor', name: t('quiz.badge_professor'), icon: <BrainCircuit />, desc: t('quiz.badge_professor_desc') },
                   ].map(badge => {
                     const isUnlocked = badges.includes(badge.id);
                     return (
@@ -517,7 +521,7 @@ function QuizPageContent() {
                 <div className="glass-panel px-6 py-3 rounded-2xl flex items-center gap-3">
                   {gameMode === 'marathon' ? <Flame className="w-5 h-5 text-orange-500" /> : <Trophy className="w-5 h-5 text-yellow-500" />}
                   <div className="flex flex-col items-start">
-                    <span className="text-[8px] font-black text-foreground/40 uppercase tracking-tighter">Current Score</span>
+                    <span className="text-[8px] font-black text-foreground/40 uppercase tracking-tighter">{t('quiz.score_current')}</span>
                     <span className="font-black text-xl tabular-nums leading-none">{score}</span>
                   </div>
                 </div>
@@ -525,7 +529,7 @@ function QuizPageContent() {
                 <div className="glass-panel px-6 py-3 rounded-2xl flex items-center gap-3">
                   <Gamepad2 className="w-5 h-5 text-primary" />
                   <div className="flex flex-col items-start">
-                    <span className="text-[8px] font-black text-foreground/40 uppercase tracking-tighter">High Score</span>
+                    <span className="text-[8px] font-black text-foreground/40 uppercase tracking-tighter">{t('quiz.score_high')}</span>
                     <span className="font-black text-xl tabular-nums leading-none">
                       {isDaily ? '-' : quizHighScores[quizChallenge]}
                     </span>
@@ -558,7 +562,7 @@ function QuizPageContent() {
                 {isDaily && (
                   <div className="glass-panel px-6 py-3 rounded-2xl flex items-center gap-3 border-orange-500/30">
                     <div className="flex flex-col items-start">
-                      <span className="text-[8px] font-black text-orange-500/60 uppercase tracking-tighter">Progress</span>
+                      <span className="text-[8px] font-black text-orange-500/60 uppercase tracking-tighter">{t('quiz.progress')}</span>
                       <span className="font-black text-xl tabular-nums leading-none">{dailyIndex}/10</span>
                     </div>
                   </div>
@@ -587,14 +591,14 @@ function QuizPageContent() {
                     >
                       {quizChallenge === 'stats' ? (
                         <div className="glass-panel p-8 rounded-[2rem] w-full max-w-md space-y-4">
-                          <p className="text-xs font-black uppercase tracking-[0.2em] text-foreground/40 mb-4">Who has these stats?</p>
+                          <p className="text-xs font-black uppercase tracking-[0.2em] text-foreground/40 mb-4">{t('quiz.who_stats')}</p>
                           {[
-                            { label: 'HP', val: currentPokemon.stats[0].base_stat, color: '#FF0000' },
-                            { label: 'ATK', val: currentPokemon.stats[1].base_stat, color: '#F08030' },
-                            { label: 'DEF', val: currentPokemon.stats[2].base_stat, color: '#F8D030' },
-                            { label: 'SPA', val: currentPokemon.stats[3].base_stat, color: '#6890F0' },
-                            { label: 'SPD', val: currentPokemon.stats[4].base_stat, color: '#78C850' },
-                            { label: 'SPE', val: currentPokemon.stats[5].base_stat, color: '#F85888' },
+                            { label: t('stats.hp_short'), val: currentPokemon.stats[0].base_stat, color: '#FF0000' },
+                            { label: t('stats.attack_short'), val: currentPokemon.stats[1].base_stat, color: '#F08030' },
+                            { label: t('stats.defense_short'), val: currentPokemon.stats[2].base_stat, color: '#F8D030' },
+                            { label: t('stats.special_attack_short'), val: currentPokemon.stats[3].base_stat, color: '#6890F0' },
+                            { label: t('stats.special_defense_short'), val: currentPokemon.stats[4].base_stat, color: '#78C850' },
+                            { label: t('stats.speed_short'), val: currentPokemon.stats[5].base_stat, color: '#F85888' },
                           ].map(s => (
                             <div key={s.label} className="space-y-1">
                               <div className="flex justify-between text-[10px] font-black">
@@ -635,11 +639,11 @@ function QuizPageContent() {
                         >
                           {isCorrect ? (
                             <div className="bg-green-500 text-white px-6 py-2 rounded-full shadow-lg shadow-green-500/50 flex items-center gap-2 font-black uppercase text-xs">
-                              <CheckCircle2 className="w-4 h-4" /> Correct
+                              <CheckCircle2 className="w-4 h-4" /> {t('quiz.correct')}
                             </div>
                           ) : (
                             <div className="bg-red-500 text-white px-6 py-2 rounded-full shadow-lg shadow-red-500/50 flex items-center gap-2 font-black uppercase text-xs">
-                              <AlertCircle className="w-4 h-4" /> Wrong
+                              <AlertCircle className="w-4 h-4" /> {t('quiz.wrong')}
                             </div>
                           )}
                         </motion.div>
@@ -679,3 +683,4 @@ function QuizPageContent() {
     </div>
   );
 }
+

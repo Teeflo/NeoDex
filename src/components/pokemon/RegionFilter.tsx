@@ -4,21 +4,23 @@ import { usePokedexStore } from '@/store/pokedex';
 import { cn } from '@/lib/utils';
 import { X, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from '@/lib/i18n';
 
 const REGIONS = [
-  { name: 'Kanto', gen: '1' },
-  { name: 'Johto', gen: '2' },
-  { name: 'Hoenn', gen: '3' },
-  { name: 'Sinnoh', gen: '4' },
-  { name: 'Unova', gen: '5' },
-  { name: 'Kalos', gen: '6' },
-  { name: 'Alola', gen: '7' },
-  { name: 'Galar', gen: '8' },
-  { name: 'Paldea', gen: '9' },
+  { key: 'kanto', gen: '1' },
+  { key: 'johto', gen: '2' },
+  { key: 'hoenn', gen: '3' },
+  { key: 'sinnoh', gen: '4' },
+  { key: 'unova', gen: '5' },
+  { key: 'kalos', gen: '6' },
+  { key: 'alola', gen: '7' },
+  { key: 'galar', gen: '8' },
+  { key: 'paldea', gen: '9' },
 ];
 
 export default function RegionFilter() {
   const { selectedGeneration, setSelectedGeneration } = usePokedexStore();
+  const { t } = useTranslation();
 
   return (
     <motion.div 
@@ -30,7 +32,7 @@ export default function RegionFilter() {
       <div className="flex flex-wrap lg:flex-nowrap gap-2 md:gap-3 justify-start lg:justify-center px-4 mx-auto w-full max-w-7xl overflow-x-auto scrollbar-hide">
         <div className="hidden sm:flex items-center gap-2 mr-2 px-3 py-2 bg-primary/10 rounded-full border border-primary/20">
           <Map className="w-4 h-4 text-primary" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-primary/80">Regions</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-primary/80">{t('regions.title')}</span>
         </div>
 
         <AnimatePresence mode="popLayout">
@@ -41,19 +43,21 @@ export default function RegionFilter() {
               exit={{ scale: 0.8, opacity: 0, width: 0 }}
               onClick={() => setSelectedGeneration(null)}
               className="flex items-center gap-1 bg-destructive/10 border border-destructive/20 px-4 py-2 rounded-full text-xs text-destructive hover:bg-destructive/20 transition-colors whitespace-nowrap overflow-hidden"
+              aria-label={t('filters.reset')}
             >
               <X className="w-3 h-3" />
-              <span className="font-bold uppercase tracking-tighter">Reset</span>
+              <span className="font-bold uppercase tracking-tighter">{t('filters.reset')}</span>
             </motion.button>
           )}
         </AnimatePresence>
         
         {REGIONS.map((region) => {
           const isActive = selectedGeneration === parseInt(region.gen);
+          const label = t(`regions.${region.key}`);
           
           return (
             <button
-              key={region.name}
+              key={region.key}
               onClick={() => setSelectedGeneration(isActive ? null : parseInt(region.gen))}
               className={cn(
                 "relative px-5 py-2 rounded-full text-[11px] font-black uppercase tracking-widest transition-all duration-300 overflow-hidden group border",
@@ -63,7 +67,7 @@ export default function RegionFilter() {
               )}
             >
               <span className="relative z-10 flex items-center gap-2">
-                {region.name}
+                {label}
               </span>
             </button>
           );

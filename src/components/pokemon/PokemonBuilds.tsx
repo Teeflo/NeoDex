@@ -4,6 +4,7 @@ import { useQueries } from '@tanstack/react-query';
 import { getMoveDetail, MoveDetail } from '@/lib/api';
 import { PokemonDetail, TYPE_COLORS } from '@/types/pokemon';
 import { motion } from 'framer-motion';
+import { useMemo } from 'react';
 import { 
   Swords, 
   ShieldCheck, 
@@ -12,18 +13,33 @@ import {
   Activity,
   Target
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatName } from '@/lib/utils';
+import { useTranslation } from '@/lib/i18n';
+import { usePokedexStore } from '@/store/pokedex';
+import { useState, useEffect } from 'react';
 
 interface PokemonBuildsProps {
   pokemon: PokemonDetail;
 }
 
 export function PokemonBuilds({ pokemon }: PokemonBuildsProps) {
+  const { t, i18n } = useTranslation();
+  const { language, systemLanguage } = usePokedexStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const resolvedLang = mounted 
+    ? (language === 'auto' ? systemLanguage : language) 
+    : i18n.language || 'en';
+
   const moveNames = pokemon.moves.slice(0, 20).map(m => m.move.name);
   
   const moveQueries = useQueries({
     queries: moveNames.map(name => ({
-      queryKey: ['move-detail', name],
+      queryKey: ['move-detail', name, resolvedLang],
       queryFn: () => getMoveDetail(name),
       staleTime: 24 * 60 * 60 * 1000,
     }))
@@ -56,34 +72,34 @@ export function PokemonBuilds({ pokemon }: PokemonBuildsProps) {
 
     return [
       {
-        name: 'Sweeper',
-        desc: 'Maximum offensive power to knock out opponents quickly.',
+        name: t('builds.sweeper_title'),
+        desc: t('builds.sweeper_desc'),
         icon: <Swords className="w-5 h-5 text-red-500" />,
         moves: sweeperMoves,
         color: 'border-red-500/20 bg-red-500/5'
       },
       {
-        name: 'Tank',
-        desc: 'Focused on survivability and chip damage.',
+        name: t('builds.tank_title'),
+        desc: t('builds.tank_desc'),
         icon: <ShieldCheck className="w-5 h-5 text-blue-500" />,
         moves: tankMoves.length >= 4 ? tankMoves : moves.slice(0, 4),
         color: 'border-blue-500/20 bg-blue-500/5'
       },
       {
-        name: 'Balanced',
-        desc: 'A versatile moveset for various battle situations.',
+        name: t('builds.balanced_title'),
+        desc: t('builds.balanced_desc'),
         icon: <Zap className="w-5 h-5 text-yellow-500" />,
         moves: balancedMoves.length >= 4 ? balancedMoves : moves.slice(4, 8),
         color: 'border-yellow-500/20 bg-yellow-500/5'
       }
     ];
-  }, [moves, atk, spAtk]);
+  }, [moves, atk, spAtk, t]);
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-12 gap-4">
         <Activity className="w-10 h-10 animate-pulse text-primary/40" />
-        <p className="text-xs font-black uppercase tracking-widest text-foreground/30">Analyzing battle data...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-foreground/30">{t('builds.loading')}</p>
       </div>
     );
   }
@@ -104,58 +120,62 @@ export function PokemonBuilds({ pokemon }: PokemonBuildsProps) {
                 {build.icon}
               </div>
               <div>
-                <h3 className="text-2xl font-black">{build.name} Build</h3>
+                <h3 className="text-2xl font-black">{t('builds.title', { name: build.name })}</h3>
                 <p className="text-xs text-foreground/50 font-medium">{build.desc}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-background/40 rounded-full border border-white/5">
               <Trophy className="w-4 h-4 text-yellow-500" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-foreground/60">Recommended</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-foreground/60">{t('builds.recommended')}</span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {build.moves.map((move, i) => (
-              <div key={`${move.name}-${i}`} className="bg-background/40 p-4 rounded-2xl border border-white/5 hover:border-primary/30 transition-all group">
-                <div className="flex justify-between items-start mb-3">
-                  <span className="font-black text-sm capitalize group-hover:text-primary transition-colors">
-                    {move.name.replace('-', ' ')}
-                  </span>
-                  <span 
-                    className="px-2 py-0.5 rounded text-[8px] font-black uppercase text-white shadow-sm"
-                    style={{ backgroundColor: TYPE_COLORS[move.type.name] }}
-                  >
-                    {move.type.name}
-                  </span>
+            {build.moves.map((move, i) => {
+              const localizedMoveName = move.names.find(n => n.language.name === resolvedLang)?.name 
+                || move.names.find(n => n.language.name === 'en')?.name 
+                || formatName(move.name);
+
+              return (
+                <div key={`${move.name}-${i}`} className="bg-background/40 p-4 rounded-2xl border border-white/5 hover:border-primary/30 transition-all group">
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="font-black text-sm capitalize group-hover:text-primary transition-colors">
+                      {localizedMoveName}
+                    </span>
+                    <span 
+                      className="px-2 py-0.5 rounded text-[8px] font-black uppercase text-white shadow-sm"
+                      style={{ backgroundColor: TYPE_COLORS[move.type.name] }}
+                    >
+                      {t(`types.${move.type.name}`)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="w-3 h-3 text-yellow-500/60" />
+                      <span className="text-[10px] font-bold text-foreground/40 uppercase">{t('moves.power_short')}</span>
+                      <span className="text-xs font-black">{move.power || '--'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Target className="w-3 h-3 text-blue-500/60" />
+                      <span className="text-[10px] font-bold text-foreground/40 uppercase">{t('moves.accuracy_short')}</span>
+                      <span className="text-xs font-black">{move.accuracy || '--'}%</span>
+                    </div>
+                    <div className="ml-auto flex items-center gap-1">
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        move.damage_class.name === 'physical' ? 'bg-orange-500' : 
+                        move.damage_class.name === 'special' ? 'bg-blue-500' : 'bg-gray-500'
+                      )} />
+                      <span className="text-[8px] font-black uppercase text-foreground/30">{t(`moves.damage_class.${move.damage_class.name}`)}</span>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-1.5">
-                    <Zap className="w-3 h-3 text-yellow-500/60" />
-                    <span className="text-[10px] font-bold text-foreground/40 uppercase">Pow</span>
-                    <span className="text-xs font-black">{move.power || '--'}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Target className="w-3 h-3 text-blue-500/60" />
-                    <span className="text-[10px] font-bold text-foreground/40 uppercase">Acc</span>
-                    <span className="text-xs font-black">{move.accuracy || '--'}%</span>
-                  </div>
-                  <div className="ml-auto flex items-center gap-1">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full",
-                      move.damage_class.name === 'physical' ? 'bg-orange-500' : 
-                      move.damage_class.name === 'special' ? 'bg-blue-500' : 'bg-gray-500'
-                    )} />
-                    <span className="text-[8px] font-black uppercase text-foreground/30">{move.damage_class.name}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </motion.div>
       ))}
     </div>
   );
 }
-
-import { useMemo } from 'react';

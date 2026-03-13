@@ -4,14 +4,16 @@ import { usePokedexStore } from '@/store/pokedex';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SVGProps } from 'react';
+import { useTranslation } from '@/lib/i18n';
 
 export default function CaughtFilter() {
   const { showCaughtOnly, setShowCaughtOnly } = usePokedexStore();
+  const { t } = useTranslation();
 
   const modes: { id: 'all' | 'caught' | 'uncaught', label: string }[] = [
-    { id: 'all', label: 'All' },
-    { id: 'caught', label: 'Caught' },
-    { id: 'uncaught', label: 'Missing' }
+    { id: 'all', label: t('caught_filter.all') },
+    { id: 'caught', label: t('caught_filter.caught') },
+    { id: 'uncaught', label: t('caught_filter.missing') }
   ];
 
   return (

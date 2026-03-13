@@ -9,7 +9,7 @@ import { Heart, Home, Loader2, Ghost } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useMemo, useEffect, useState, ButtonHTMLAttributes } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/lib/i18n';
 
 interface FavoriteButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
@@ -64,7 +64,7 @@ export default function FavoritesPage() {
                 {t('favorites.title')}
               </h2>
               <p className="text-foreground/40 font-bold uppercase tracking-widest text-xs mt-1">
-                {t('favorites.subtitle')} {mounted && `(${favoritePokemon.length} Pokémon)`}
+                {t('favorites.subtitle')} {mounted ? t('favorites.count', { count: favoritePokemon.length }) : ''}
               </p>
             </div>
           </div>
@@ -107,8 +107,9 @@ export default function FavoritesPage() {
       </main>
 
       <footer className="py-12 text-center text-xs text-foreground/40 font-semibold border-t border-white/5 mt-20 bg-background/40 backdrop-blur-md relative z-10">
-        <p>Pokédex Generation © {new Date().getFullYear()}</p>
+        <p>{t('home.footer_copyright', { year: new Date().getFullYear() })}</p>
       </footer>
     </div>
   );
 }
+

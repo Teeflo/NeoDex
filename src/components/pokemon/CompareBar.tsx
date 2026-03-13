@@ -8,15 +8,27 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowLeftRight, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/lib/i18n';
+import { useState, useEffect } from 'react';
 
 import Image from 'next/image';
 
 export default function CompareBar() {
-  const { compareList, removeFromCompare, clearCompare } = usePokedexStore();
+  const { language, systemLanguage, compareList, removeFromCompare, clearCompare } = usePokedexStore();
+  const { t, i18n } = useTranslation();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const resolvedLang = mounted 
+    ? (language === 'auto' ? systemLanguage : language) 
+    : i18n.language || 'en';
 
   const pokemonQueries = useQueries({
     queries: compareList.map(id => ({
-      queryKey: ['pokemon', id],
+      queryKey: ['pokemon-compare-bar', id, resolvedLang],
       queryFn: async () => {
         const { data } = await axios.get<PokemonDetail>(`https://pokeapi.co/api/v2/pokemon/${id}`);
         return data;
@@ -59,6 +71,7 @@ export default function CompareBar() {
                         alt={p.name} 
                         width={40}
                         height={40}
+                        sizes="40px"
                         className="w-full h-full object-contain filter drop-shadow-md"
                       />
                     ) : null}
@@ -66,6 +79,7 @@ export default function CompareBar() {
                   <button 
                     onClick={() => removeFromCompare(id)}
                     className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    aria-label={t('card.remove_compare')}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -87,19 +101,32 @@ export default function CompareBar() {
             size="icon" 
             onClick={clearCompare}
             className="hover:bg-destructive/10 hover:text-destructive rounded-full"
+            aria-label={t('compare.clear')}
+            title={t('compare.clear')}
           >
             <Trash2 className="w-5 h-5" />
           </Button>
           
-          <Link href="/compare">
-            <Button 
+          {compareList.length < 2 ? (
+            <Button
               className="rounded-xl font-black uppercase tracking-widest gap-2 px-6 shadow-lg shadow-primary/20"
-              disabled={compareList.length < 2}
+              disabled
+              aria-disabled="true"
+              title={t('compare.need_two')}
             >
               <ArrowLeftRight className="w-4 h-4" />
-              Compare
+              {t('nav.compare')}
             </Button>
-          </Link>
+          ) : (
+            <Link href="/compare">
+              <Button 
+                className="rounded-xl font-black uppercase tracking-widest gap-2 px-6 shadow-lg shadow-primary/20"
+              >
+                <ArrowLeftRight className="w-4 h-4" />
+                {t('nav.compare')}
+              </Button>
+            </Link>
+          )}
         </div>
       </motion.div>
     </div>

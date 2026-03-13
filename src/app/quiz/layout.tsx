@@ -1,8 +1,9 @@
 import { Metadata } from 'next';
+import { t } from '@/lib/server-i18n';
 
 export const metadata: Metadata = {
-  title: "PokéQuiz — Test Your Pokémon Knowledge",
-  description: "Test your Pokémon knowledge with our interactive quiz. Multiple game modes: Time Attack, Survival, and Marathon!",
+  title: t('meta.quiz_title'),
+  description: t('meta.quiz_description'),
 };
 
 export default function QuizLayout({

@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react';
+import { t } from '@/lib/server-i18n';
 
 export default function Loading() {
   return (
@@ -8,10 +9,10 @@ export default function Loading() {
         <Loader2 className="w-16 h-16 animate-spin text-primary relative z-10" />
       </div>
       <h2 className="mt-8 text-2xl font-black uppercase tracking-[0.3em] text-foreground/40 animate-pulse">
-        Loading Ultra Pokédex
+        {t('loading.title')}
       </h2>
       <p className="mt-2 text-[10px] font-bold text-foreground/20 uppercase tracking-widest">
-        Preparing your trainer experience
+        {t('loading.subtitle')}
       </p>
     </div>
   );

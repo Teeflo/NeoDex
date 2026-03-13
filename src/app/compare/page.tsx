@@ -3,7 +3,7 @@
 import Header from '@/components/layout/Header';
 import { usePokedexStore } from '@/store/pokedex';
 import { useQueries } from '@tanstack/react-query';
-import { getPokemonDetail } from '@/lib/api';
+import { getPokemonDetail, getPokemonSpecies } from '@/lib/api';
 import { TYPE_COLORS } from '@/types/pokemon';
 import { 
   ArrowLeft, 
@@ -22,7 +22,7 @@ import { motion } from 'framer-motion';
 import { cn, formatId } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useMemo, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/lib/i18n';
 import { 
   Radar, 
   RadarChart, 
@@ -31,61 +31,74 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
-
-const STAT_LABELS: Record<string, string> = {
-  'hp': 'HP',
-  'attack': 'ATK',
-  'defense': 'DEF',
-  'special-attack': 'SP.ATK',
-  'special-defense': 'SP.DEF',
-  'speed': 'SPD',
-};
+const STAT_KEYS = ['hp', 'attack', 'defense', 'special-attack', 'special-defense', 'speed'] as const;
 
 import Image from 'next/image';
 
 export default function ComparePage() {
-  const { compareList, removeFromCompare, clearCompare } = usePokedexStore();
+  const { language, systemLanguage, compareList, removeFromCompare, clearCompare } = usePokedexStore();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(timer);
   }, []);
 
+  const resolvedLang = mounted 
+    ? (language === 'auto' ? systemLanguage : language) 
+    : i18n.language || 'en';
+
+  const statLabels: Record<string, string> = useMemo(() => ({
+    'hp': t('stats.hp_short'),
+    'attack': t('stats.attack_short'),
+    'defense': t('stats.defense_short'),
+    'special-attack': t('stats.special_attack_short'),
+    'special-defense': t('stats.special_defense_short'),
+    'speed': t('stats.speed_short'),
+  }), [t]);
+
   const pokemonQueries = useQueries({
     queries: compareList.map(id => ({
-      queryKey: ['pokemon', id],
-      queryFn: () => getPokemonDetail(id.toString()),
+      queryKey: ['pokemon-compare', id, resolvedLang],
+      queryFn: async () => {
+        const [pokemon, species] = await Promise.all([
+          getPokemonDetail(id.toString()),
+          getPokemonSpecies(id.toString()).catch(() => null)
+        ]);
+        return { pokemon, species };
+      },
       staleTime: 10 * 60 * 1000,
     }))
   });
 
   const isLoading = pokemonQueries.some(q => q.isLoading);
-  const pokemonData = pokemonQueries.map(q => q.data).filter(Boolean);
+  const compareData = useMemo(() => 
+    pokemonQueries.map(q => q.data).filter((d): d is { pokemon: any, species: any } => !!d),
+    [pokemonQueries]
+  );
 
   const chartData = useMemo(() => {
-    if (pokemonData.length === 0) return [];
+    if (compareData.length === 0) return [];
     
-    const stats = ['hp', 'attack', 'defense', 'special-attack', 'special-defense', 'speed'];
-    return stats.map((stat) => {
+    return STAT_KEYS.map((stat) => {
       const data: Record<string, string | number> = { 
-        stat: STAT_LABELS[stat],
+        stat: statLabels[stat],
         fullMark: 255 
       };
-      pokemonData.forEach(p => {
-        if (p) {
-          const s = p.stats.find(st => st.stat.name === stat);
-          data[p.name] = s ? s.base_stat : 0;
+      compareData.forEach(d => {
+        if (d.pokemon) {
+          const s = d.pokemon.stats.find((st: any) => st.stat.name === stat);
+          data[d.pokemon.name] = s ? s.base_stat : 0;
         }
       });
       return data;
     });
-  }, [pokemonData]);
+  }, [compareData, statLabels]);
 
   const bestStats = useMemo(() => {
-    if (pokemonData.length === 0) return {};
+    if (compareData.length === 0) return {};
     
     const stats: Record<string, { val: number, index: number }> = {
       total: { val: -1, index: -1 },
@@ -97,12 +110,12 @@ export default function ComparePage() {
       speed: { val: -1, index: -1 },
     };
 
-    pokemonData.forEach((p, idx) => {
-      if (!p) return;
-      const total = p.stats.reduce((acc, s) => acc + s.base_stat, 0);
+    compareData.forEach((d, idx) => {
+      if (!d.pokemon) return;
+      const total = d.pokemon.stats.reduce((acc: number, s: any) => acc + s.base_stat, 0);
       if (total > stats.total.val) stats.total = { val: total, index: idx };
 
-      p.stats.forEach(s => {
+      d.pokemon.stats.forEach((s: any) => {
         if (s.base_stat > (stats[s.stat.name]?.val || -1)) {
           stats[s.stat.name] = { val: s.base_stat, index: idx };
         }
@@ -110,7 +123,7 @@ export default function ComparePage() {
     });
 
     return stats;
-  }, [pokemonData]);
+  }, [compareData]);
 
   if (!mounted) return null;
 
@@ -127,6 +140,7 @@ export default function ComparePage() {
                 size="icon" 
                 onClick={() => router.back()}
                 className="rounded-full bg-secondary/30"
+                aria-label={t('common.back')}
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
@@ -136,7 +150,7 @@ export default function ComparePage() {
                   {t('compare.title')}
                 </h2>
                 <p className="text-foreground/40 font-bold uppercase tracking-widest text-xs mt-1">
-                  Comparing {pokemonData.length} Pokémon
+                  {t('compare.comparing', { count: compareData.length })}
                 </p>
               </div>
             </div>
@@ -158,17 +172,17 @@ export default function ComparePage() {
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
             <p className="text-foreground/40 font-semibold tracking-widest uppercase text-sm">{t('list.loading')}</p>
           </div>
-        ) : pokemonData.length === 0 ? (
+        ) : compareData.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-foreground/50 glass-panel rounded-[3rem] border-dashed border-2 border-white/10">
             <Scale className="w-16 h-16 text-foreground/20 mb-6" />
-            <h3 className="text-2xl font-black mb-2 text-foreground/80">No Pokémon to compare</h3>
-            <p className="text-base text-foreground/50 font-medium mb-8">Add Pokémon from the Pokédex to start comparing them.</p>
-            <Button onClick={() => router.push('/')} className="rounded-xl font-black uppercase px-8">Browse Pokédex</Button>
+            <h3 className="text-2xl font-black mb-2 text-foreground/80">{t('compare.no_compare')}</h3>
+            <p className="text-base text-foreground/50 font-medium mb-8">{t('compare.no_compare_desc')}</p>
+            <Button onClick={() => router.push('/')} className="rounded-xl font-black uppercase px-8">{t('compare.browse_pokedex')}</Button>
           </div>
         ) : (
           <div className="space-y-12">
             {/* Radar Chart Section */}
-            {pokemonData.length > 0 && (
+            {compareData.length > 0 && (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -183,13 +197,13 @@ export default function ComparePage() {
                           dataKey="stat" 
                           tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 'bold' }} 
                         />
-                        {pokemonData.map((p) => p && (
+                        {compareData.map((d) => d.pokemon && (
                           <Radar
-                            key={p.id}
-                            name={p.name}
-                            dataKey={p.name}
-                            stroke={TYPE_COLORS[p.types[0].type.name]}
-                            fill={TYPE_COLORS[p.types[0].type.name]}
+                            key={d.pokemon.id}
+                            name={d.species?.names?.find((n: any) => n.language.name === resolvedLang)?.name || d.pokemon.name}
+                            dataKey={d.pokemon.name}
+                            stroke={TYPE_COLORS[d.pokemon.types[0].type.name]}
+                            fill={TYPE_COLORS[d.pokemon.types[0].type.name]}
                             fillOpacity={0.3}
                           />
                         ))}
@@ -199,21 +213,22 @@ export default function ComparePage() {
                   </div>
 
                   <div className="space-y-6">
-                    <div>
-                      <h3 className="text-2xl font-black mb-2 tracking-tight">Stat Winners</h3>
-                      <p className="text-sm text-foreground/40 font-bold uppercase tracking-widest mb-6">Top performers per category</p>
+                  <div>
+                      <h3 className="text-2xl font-black mb-2 tracking-tight">{t('compare.stat_winners')}</h3>
+                      <p className="text-sm text-foreground/40 font-bold uppercase tracking-widest mb-6">{t('compare.top_performers')}</p>
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {Object.entries(bestStats).map(([key, info]) => {
                         if (key === 'total') return null;
-                        const winner = pokemonData[info.index];
-                        if (!winner) return null;
+                        const winner = compareData[info.index];
+                        if (!winner || !winner.pokemon) return null;
+                        const winnerName = winner.species?.names?.find((n: any) => n.language.name === resolvedLang)?.name || winner.pokemon.name;
                         return (
                           <div key={key} className="bg-secondary/20 p-4 rounded-2xl border border-white/5 flex flex-col gap-1 hover:border-primary/30 transition-all">
-                            <span className="text-[10px] font-black uppercase text-foreground/40">{STAT_LABELS[key]}</span>
+                            <span className="text-[10px] font-black uppercase text-foreground/40">{statLabels[key]}</span>
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-black text-sm capitalize truncate">{winner.name}</span>
+                              <span className="font-black text-sm capitalize truncate">{winnerName}</span>
                               <span className="font-black text-primary bg-primary/10 px-2 py-0.5 rounded-lg text-xs">{info.val}</span>
                             </div>
                           </div>
@@ -228,12 +243,14 @@ export default function ComparePage() {
                             <Trophy className="w-6 h-6" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-black uppercase text-primary tracking-widest">Overall Champion</p>
-                            <h4 className="text-xl font-black capitalize">{pokemonData[bestStats.total.index]?.name}</h4>
+                            <p className="text-[10px] font-black uppercase text-primary tracking-widest">{t('compare.overall_champion')}</p>
+                            <h4 className="text-xl font-black capitalize">
+                              {compareData[bestStats.total.index]?.species?.names?.find((n: any) => n.language.name === resolvedLang)?.name || compareData[bestStats.total.index]?.pokemon?.name}
+                            </h4>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-[10px] font-black uppercase text-foreground/40 mb-1">Total Stats</p>
+                          <p className="text-[10px] font-black uppercase text-foreground/40 mb-1">{t('compare.total_stats')}</p>
                           <p className="text-2xl font-black text-primary">{bestStats.total.val}</p>
                         </div>
                       </div>
@@ -245,15 +262,18 @@ export default function ComparePage() {
 
             <div className={cn(
               "grid gap-6",
-              pokemonData.length === 1 ? "grid-cols-1 max-w-md mx-auto" : 
-              pokemonData.length === 2 ? "grid-cols-1 md:grid-cols-2" : 
+              compareData.length === 1 ? "grid-cols-1 max-w-md mx-auto" : 
+              compareData.length === 2 ? "grid-cols-1 md:grid-cols-2" : 
               "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
             )}>
-              {pokemonData.map((p, idx) => {
-                if (!p) return null;
+              {compareData.map((d, idx) => {
+                if (!d.pokemon) return null;
+                const p = d.pokemon;
+                const s_data = d.species;
                 const color = TYPE_COLORS[p.types[0].type.name];
-                const totalStats = p.stats.reduce((acc, s) => acc + s.base_stat, 0);
+                const totalStats = p.stats.reduce((acc: number, s: any) => acc + s.base_stat, 0);
                 const isOverallBest = bestStats.total?.index === idx;
+                const displayName = s_data?.names?.find((n: any) => n.language.name === resolvedLang)?.name || p.name;
 
                 return (
                   <motion.div 
@@ -267,6 +287,7 @@ export default function ComparePage() {
                     <button 
                       onClick={() => removeFromCompare(p.id)}
                       className="absolute top-4 right-4 z-20 p-2 rounded-full bg-secondary/50 hover:bg-destructive/20 hover:text-destructive transition-colors"
+                      aria-label={t('card.remove_compare')}
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -277,21 +298,22 @@ export default function ComparePage() {
                         <div className="absolute inset-0 bg-white/5 rounded-full blur-2xl group-hover:bg-primary/5 transition-colors" />
                         <Image 
                           src={p.sprites.other['official-artwork'].front_default || p.sprites.front_default} 
-                          alt={p.name} 
+                          alt={displayName} 
                           width={160}
                           height={160}
+                          sizes="160px"
                           className="w-full h-full object-contain relative z-10 drop-shadow-2xl group-hover:scale-110 transition-transform"
                         />
                       </div>
-                      <h3 className="text-2xl font-black capitalize mb-4">{p.name}</h3>
+                      <h3 className="text-2xl font-black capitalize mb-4">{displayName}</h3>
                       <div className="flex gap-2 justify-center">
-                        {p.types.map(t => (
+                        {p.types.map((typeItem: any) => (
                           <span 
-                            key={t.type.name} 
+                            key={typeItem.type.name} 
                             className="glass-tag px-4 py-1 text-[10px]"
-                            style={{ backgroundColor: `${TYPE_COLORS[t.type.name]}cc`, borderColor: TYPE_COLORS[t.type.name] }}
+                            style={{ backgroundColor: `${TYPE_COLORS[typeItem.type.name]}cc`, borderColor: TYPE_COLORS[typeItem.type.name] }}
                           >
-                            {t.type.name}
+                            {t(`types.${typeItem.type.name}`)}
                           </span>
                         ))}
                       </div>
@@ -322,20 +344,20 @@ export default function ComparePage() {
                             "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter",
                             isOverallBest ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400" : "bg-secondary/50 text-foreground/40"
                           )}>
-                            {t('compare.total')}: {totalStats} {isOverallBest && "★"}
+                            {t('compare.total')}: {totalStats} {isOverallBest ? t('compare.best') : ''}
                           </div>
                         </div>
                         <div className="space-y-3">
-                          {p.stats.map(s => {
+                          {p.stats.map((s: any) => {
                             const isBest = bestStats[s.stat.name]?.index === idx;
                             return (
                               <div key={s.stat.name} className="space-y-1">
                                 <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider">
                                   <span className={cn(isBest ? "text-primary" : "text-foreground/40")}>
-                                    {STAT_LABELS[s.stat.name]}
+                                    {statLabels[s.stat.name]}
                                   </span>
                                   <span className={cn(isBest ? "text-primary font-black" : "text-foreground/70")}>
-                                    {s.base_stat} {isBest && "🏆"}
+                                    {s.base_stat} {isBest ? t('compare.best') : ''}
                                   </span>
                                 </div>
                                 <div className="h-1.5 rounded-full bg-secondary/50 overflow-hidden">
@@ -358,7 +380,7 @@ export default function ComparePage() {
                           <Sparkles className="w-3 h-3" /> {t('detail.abilities')}
                         </h4>
                         <div className="flex flex-wrap gap-2">
-                          {p.abilities.map(a => (
+                          {p.abilities.map((a: any) => (
                             <div 
                               key={a.ability.name} 
                               className="px-3 py-1.5 bg-secondary/20 border border-white/5 rounded-xl text-[10px] font-bold capitalize"
@@ -380,3 +402,4 @@ export default function ComparePage() {
     </div>
   );
 }
+

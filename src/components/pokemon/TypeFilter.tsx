@@ -5,10 +5,12 @@ import { TYPE_COLORS } from '@/types/pokemon';
 import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from '@/lib/i18n';
 
 export default function TypeFilter() {
   const { selectedTypes, toggleType, setSelectedTypes } = usePokedexStore();
   const types = Object.keys(TYPE_COLORS);
+  const { t } = useTranslation();
 
   return (
     <motion.div 
@@ -26,9 +28,10 @@ export default function TypeFilter() {
               exit={{ scale: 0.8, opacity: 0, width: 0 }}
               onClick={() => setSelectedTypes([])}
               className="flex items-center gap-1 glass-btn px-4 py-2.5 text-sm text-foreground/80 hover:text-destructive whitespace-nowrap overflow-hidden"
+              aria-label={t('filters.clear_types', { count: selectedTypes.length })}
             >
               <X className="w-4 h-4" />
-              <span className="font-semibold">Clear ({selectedTypes.length})</span>
+              <span className="font-semibold">{t('filters.clear_types', { count: selectedTypes.length })}</span>
             </motion.button>
           )}
         </AnimatePresence>
@@ -36,6 +39,7 @@ export default function TypeFilter() {
         {types.map((type) => {
           const isActive = selectedTypes.includes(type);
           const color = TYPE_COLORS[type];
+          const label = t(`types.${type}`);
           
           return (
             <button
@@ -65,7 +69,7 @@ export default function TypeFilter() {
                     className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" 
                   />
                 )}
-                {type}
+                {label}
               </span>
             </button>
           );

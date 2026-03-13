@@ -7,10 +7,11 @@ import FavoriteToggle from '@/components/pokemon/FavoriteToggle';
 import CaughtFilter from '@/components/pokemon/CaughtFilter';
 import SortSelector from '@/components/pokemon/SortSelector';
 import RecentlyViewed from '@/components/pokemon/RecentlyViewed';
+import AdvancedFiltersWrapper from '@/components/pokemon/AdvancedFilters';
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
 import { getPokemonList } from '@/lib/api';
 import { pokemonKeys } from '@/lib/api/keys';
-import AdvancedFiltersWrapper from '@/components/pokemon/AdvancedFiltersWrapper';
+import { t } from '@/lib/server-i18n';
 
 export default async function Home() {
   const queryClient = new QueryClient();
@@ -32,11 +33,11 @@ export default async function Home() {
             <div className="inline-block mb-6 relative group">
               <div className="absolute inset-0 bg-primary/30 blur-3xl rounded-full group-hover:bg-primary/50 transition-colors duration-700" />
               <h2 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-primary to-orange-500 tracking-tighter drop-shadow-sm relative z-10">
-                Gotta Catch &apos;Em All!
+                {t('home.hero_title')}
               </h2>
             </div>
             <p className="text-foreground/60 mt-2 text-sm md:text-base font-bold tracking-[0.2em] uppercase">
-              The Ultimate Pokédex Experience
+              {t('home.hero_subtitle')}
             </p>
 
             <div className="flex flex-col items-center mt-12 w-full max-w-5xl mx-auto space-y-8">
@@ -64,10 +65,11 @@ export default async function Home() {
         </main>
 
         <footer className="py-12 text-center text-xs text-foreground/40 font-semibold border-t border-border mt-20 bg-background/40 backdrop-blur-xl relative z-10">
-          <p>Pokédex Generation © {new Date().getFullYear()}</p>
-          <p className="mt-4 opacity-50">Data provided by PokéAPI</p>
+          <p>{t('home.footer_copyright', { year: new Date().getFullYear() })}</p>
+          <p className="mt-4 opacity-50">{t('home.footer_data')}</p>
         </footer>
       </div>
     </HydrationBoundary>
   );
 }
+

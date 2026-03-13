@@ -123,6 +123,7 @@ export interface MoveDetail {
   type: { name: string; url: string };
   damage_class: { name: string; url: string };
   effect_entries: { effect: string; short_effect: string; language: { name: string } }[];
+  names: { name: string; language: { name: string } }[];
 }
 
 export const getMoveDetail = async (name: string): Promise<MoveDetail> => {

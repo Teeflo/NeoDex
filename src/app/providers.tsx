@@ -13,7 +13,7 @@ function CacheInitializer() {
     const checkAndPreload = async () => {
       try {
         const { get } = await import('idb-keyval');
-        const cached = await get('all-pokemon-detailed');
+        const cached = await get('poke-cache-all-pokemon-detailed-v5');
         if (!cached) {
           await getAllPokemonDetailed();
         }
@@ -30,9 +30,11 @@ function CacheInitializer() {
 }
 
 function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { theme, setSystemLanguage, language, systemLanguage } = usePokedexStore();
+  const { theme, setSystemLanguage, language, systemLanguage, _hasHydrated } = usePokedexStore();
 
   useEffect(() => {
+    if (!_hasHydrated) return;
+
     // Detect system language
     if (navigator.language) {
       const baseLang = navigator.language.split('-')[0];
@@ -55,12 +57,26 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
     } else {
       root.classList.toggle('dark', theme === 'dark');
     }
-  }, [theme, setSystemLanguage]);
+  }, [theme, setSystemLanguage, _hasHydrated]);
 
   useEffect(() => {
+    if (!_hasHydrated) return;
     const resolvedLang = language === 'auto' ? systemLanguage : language;
     i18n.changeLanguage(resolvedLang);
-  }, [language, systemLanguage]);
+    // Mirror to localStorage for synchronous initial boot on next reload
+    localStorage.setItem('pokedex-lang', resolvedLang);
+  }, [language, systemLanguage, _hasHydrated]);
+
+  if (!_hasHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-foreground/20 animate-pulse">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
 
   return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
 }

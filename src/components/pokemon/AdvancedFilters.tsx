@@ -22,18 +22,18 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/lib/i18n';
 
 const GENERATIONS = [
-  { name: 'Gen 1', id: 1, region: 'Kanto' },
-  { name: 'Gen 2', id: 2, region: 'Johto' },
-  { name: 'Gen 3', id: 3, region: 'Hoenn' },
-  { name: 'Gen 4', id: 4, region: 'Sinnoh' },
-  { name: 'Gen 5', id: 5, region: 'Unova' },
-  { name: 'Gen 6', id: 6, region: 'Kalos' },
-  { name: 'Gen 7', id: 7, region: 'Alola' },
-  { name: 'Gen 8', id: 8, region: 'Galar' },
-  { name: 'Gen 9', id: 9, region: 'Paldea' },
+  { id: 1, region: 'kanto' },
+  { id: 2, region: 'johto' },
+  { id: 3, region: 'hoenn' },
+  { id: 4, region: 'sinnoh' },
+  { id: 5, region: 'unova' },
+  { id: 6, region: 'kalos' },
+  { id: 7, region: 'alola' },
+  { id: 8, region: 'galar' },
+  { id: 9, region: 'paldea' },
 ];
 
 const EGG_GROUPS = [
@@ -135,6 +135,7 @@ export default function AdvancedFilters() {
               onClick={resetFilters}
               className="hover:bg-primary/10 hover:text-primary rounded-full transition-colors"
               title={t('filters.reset')}
+              aria-label={t('filters.reset')}
             >
               <RotateCcw className="w-5 h-5" />
             </Button>
@@ -151,6 +152,8 @@ export default function AdvancedFilters() {
               <div className="grid grid-cols-3 gap-2">
                 {GENERATIONS.map((gen) => {
                   const isActive = selectedGeneration === gen.id;
+                  const label = t(`generations.gen_${gen.id}`);
+                  const regionLabel = t(`regions.${gen.region}`);
                   return (
                     <button
                       key={gen.id}
@@ -162,8 +165,8 @@ export default function AdvancedFilters() {
                           : "bg-secondary/20 border-white/5 text-foreground/60 hover:border-white/20 hover:text-foreground"
                       )}
                     >
-                      <span className="text-xs font-black">{gen.name}</span>
-                      <span className="text-[9px] font-medium opacity-60 uppercase">{gen.region}</span>
+                      <span className="text-xs font-black">{label}</span>
+                      <span className="text-[9px] font-medium opacity-60 uppercase">{regionLabel}</span>
                     </button>
                   );
                 })}
@@ -179,6 +182,7 @@ export default function AdvancedFilters() {
                 {Object.keys(TYPE_COLORS).map((type) => {
                   const isActive = selectedTypes.includes(type);
                   const color = TYPE_COLORS[type];
+                  const label = t(`types.${type}`);
                   return (
                     <button
                       key={type}
@@ -192,7 +196,7 @@ export default function AdvancedFilters() {
                       style={isActive ? { backgroundColor: color } : {}}
                     >
                       {isActive && <Check className="w-3 h-3 relative z-10" />}
-                      <span className="text-[10px] font-black uppercase tracking-wider relative z-10">{type}</span>
+                      <span className="text-[10px] font-black uppercase tracking-wider relative z-10">{label}</span>
                     </button>
                   );
                 })}
@@ -217,8 +221,8 @@ export default function AdvancedFilters() {
                 </div>
                 <div className="flex items-center justify-between p-4 bg-secondary/20 rounded-2xl border border-white/5">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-bold">Mythical</span>
-                    <span className="text-[10px] text-foreground/40 font-medium">Show only Mythical Pokémon</span>
+                    <span className="text-sm font-bold">{t('filters.mythical')}</span>
+                    <span className="text-[10px] text-foreground/40 font-medium">{t('filters.mythical_desc')}</span>
                   </div>
                   <Switch 
                     checked={isMythical === true}
@@ -231,11 +235,12 @@ export default function AdvancedFilters() {
             {/* Egg Groups Filter */}
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40 flex items-center gap-2">
-                Egg Groups
+                {t('filters.egg_groups')}
               </h4>
               <div className="flex flex-wrap gap-2">
                 {EGG_GROUPS.map((group) => {
                   const isActive = selectedEggGroups.includes(group);
+                  const label = t(`egg_groups.${group}`);
                   return (
                     <button
                       key={group}
@@ -247,7 +252,7 @@ export default function AdvancedFilters() {
                           : "bg-secondary/20 border-white/5 text-foreground/60 hover:border-white/20 hover:text-foreground"
                       )}
                     >
-                      {group}
+                      {label}
                     </button>
                   );
                 })}
@@ -257,11 +262,12 @@ export default function AdvancedFilters() {
             {/* Colors Filter */}
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40 flex items-center gap-2">
-                Colors
+                {t('filters.colors')}
               </h4>
               <div className="flex flex-wrap gap-2">
                 {COLORS.map((color) => {
                   const isActive = selectedColors.includes(color);
+                  const label = t(`colors.${color}`);
                   return (
                     <button
                       key={color}
@@ -273,7 +279,7 @@ export default function AdvancedFilters() {
                           : "bg-secondary/20 border-white/5 text-foreground/60 hover:border-white/20 hover:text-foreground"
                       )}
                     >
-                      {color}
+                      {label}
                     </button>
                   );
                 })}
@@ -283,11 +289,12 @@ export default function AdvancedFilters() {
             {/* Shapes Filter */}
             <div className="space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40 flex items-center gap-2">
-                Shapes
+                {t('filters.shapes')}
               </h4>
               <div className="flex flex-wrap gap-2">
                 {SHAPES.map((shape) => {
                   const isActive = selectedShapes.includes(shape);
+                  const label = t(`shapes.${shape}`);
                   return (
                     <button
                       key={shape}
@@ -299,7 +306,7 @@ export default function AdvancedFilters() {
                           : "bg-secondary/20 border-white/5 text-foreground/60 hover:border-white/20 hover:text-foreground"
                       )}
                     >
-                      {shape}
+                      {label}
                     </button>
                   );
                 })}
@@ -313,7 +320,7 @@ export default function AdvancedFilters() {
                   {t('filters.min_bst')}
                 </h4>
                 <Badge variant="secondary" className="bg-primary/10 text-primary font-black border-none">
-                  {minBaseStats}+
+                  {minBaseStats}+ {t('detail.total')}
                 </Badge>
               </div>
               <Slider
@@ -333,12 +340,12 @@ export default function AdvancedFilters() {
             {/* Individual Stats Sliders */}
             <div className="space-y-8">
               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40">
-                Minimum Base Stats
+                {t('filters.min_stats')}
               </h4>
               
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase">HP</span>
+                  <span className="text-[10px] font-bold uppercase">{t('stats.hp_short')}</span>
                   <Badge variant="secondary" className="bg-primary/10 text-primary font-black border-none text-[10px]">
                     {minHp}+
                   </Badge>
@@ -353,7 +360,7 @@ export default function AdvancedFilters() {
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase">Attack</span>
+                  <span className="text-[10px] font-bold uppercase">{t('stats.attack_short')}</span>
                   <Badge variant="secondary" className="bg-primary/10 text-primary font-black border-none text-[10px]">
                     {minAttack}+
                   </Badge>
@@ -368,7 +375,7 @@ export default function AdvancedFilters() {
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase">Defense</span>
+                  <span className="text-[10px] font-bold uppercase">{t('stats.defense_short')}</span>
                   <Badge variant="secondary" className="bg-primary/10 text-primary font-black border-none text-[10px]">
                     {minDefense}+
                   </Badge>
@@ -383,7 +390,7 @@ export default function AdvancedFilters() {
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase">Speed</span>
+                  <span className="text-[10px] font-bold uppercase">{t('stats.speed_short')}</span>
                   <Badge variant="secondary" className="bg-primary/10 text-primary font-black border-none text-[10px]">
                     {minSpeed}+
                   </Badge>
@@ -450,3 +457,4 @@ export default function AdvancedFilters() {
     </Sheet>
   );
 }
+

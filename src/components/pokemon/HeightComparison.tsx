@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/lib/i18n';
 
 import Image from 'next/image';
 
@@ -27,7 +27,7 @@ export function HeightComparison({ pokemonHeight, pokemonName, pokemonImage }: H
   return (
     <div className="w-full flex flex-col items-center">
       <h3 className="text-xl font-black mb-10 text-foreground/90 border-b border-white/10 pb-4 w-full text-center uppercase tracking-widest">
-        {t('detail.size_comparison', 'Size Comparison')}
+        {t('detail.size_comparison')}
       </h3>
       
       <div className="relative w-full h-80 flex items-end justify-center gap-16 md:gap-24 overflow-hidden rounded-3xl bg-black/5 dark:bg-white/5 border border-white/5 p-8">
@@ -62,7 +62,7 @@ export function HeightComparison({ pokemonHeight, pokemonName, pokemonImage }: H
             </div>
           </motion.div>
           <div className="mt-6 text-center">
-            <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-1">Human</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-1">{t('detail.human')}</p>
             <p className="text-sm font-black text-foreground/60">{humanHeight.toFixed(1)}m</p>
           </div>
         </div>
@@ -92,6 +92,7 @@ export function HeightComparison({ pokemonHeight, pokemonName, pokemonImage }: H
                 src={pokemonImage}
                 alt={pokemonName}
                 fill
+                sizes="180px"
                 className="object-contain"
               />
             </motion.div>
@@ -114,11 +115,11 @@ export function HeightComparison({ pokemonHeight, pokemonName, pokemonImage }: H
       </div>
       
       <p className="mt-6 text-[10px] text-foreground/30 font-bold uppercase tracking-[0.2em] text-center max-w-xs">
-        {heightInMeters > humanHeight 
-          ? `${pokemonName} is taller than an average human.` 
-          : `${pokemonName} is smaller than an average human.`
-        }
+        {heightInMeters > humanHeight
+          ? t('detail.height_taller', { name: pokemonName })
+          : t('detail.height_shorter', { name: pokemonName })}
       </p>
     </div>
   );
 }
+

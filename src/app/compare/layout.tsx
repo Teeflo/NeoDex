@@ -1,8 +1,9 @@
 import { Metadata } from 'next';
+import { t } from '@/lib/server-i18n';
 
 export const metadata: Metadata = {
-  title: "Compare Pokémon — Stats & Type Matchups",
-  description: "Compare multiple Pokémon side-by-side to analyze their stats, types, and abilities.",
+  title: t('meta.compare_title'),
+  description: t('meta.compare_description'),
 };
 
 export default function CompareLayout({

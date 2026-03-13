@@ -143,6 +143,10 @@ interface PokedexStore {
   getLanguageId: () => number;
   systemLanguage: string;
   setSystemLanguage: (lang: string) => void;
+
+  // Hydration state
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const usePokedexStore = create<PokedexStore>()(
@@ -326,19 +330,60 @@ export const usePokedexStore = create<PokedexStore>()(
       setLanguage: (lang) => set({ language: lang }),
       getLanguageId: () => {
         const lang = get().language === 'auto' ? get().systemLanguage : get().language;
-        return lang === 'fr' ? 5 : 9;
+        const mapping: Record<string, number> = {
+          en: 9,
+          fr: 5,
+          de: 6,
+          es: 7,
+          it: 8,
+          ja: 11,
+          ko: 3,
+        };
+        return mapping[lang] || 9;
       },
       systemLanguage: typeof window !== 'undefined' ? (navigator.language.split('-')[0] || 'en') : 'en',
       setSystemLanguage: (lang) => set({ systemLanguage: lang }),
+
+      _hasHydrated: false,
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
     {
       name: 'pokedex-storage',
       storage: createJSONStorage(() => storage),
-      partialize: (state) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { searchTerm, systemLanguage, ...rest } = state;
-        return rest;
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
       },
+      partialize: (state) => ({
+        favorites: state.favorites,
+        caughtPokemon: state.caughtPokemon,
+        showCaughtOnly: state.showCaughtOnly,
+        selectedTypes: state.selectedTypes,
+        selectedGeneration: state.selectedGeneration,
+        selectedEggGroups: state.selectedEggGroups,
+        selectedColors: state.selectedColors,
+        selectedShapes: state.selectedShapes,
+        isLegendary: state.isLegendary,
+        isMythical: state.isMythical,
+        minBaseStats: state.minBaseStats,
+        minAttack: state.minAttack,
+        minDefense: state.minDefense,
+        minSpeed: state.minSpeed,
+        minHp: state.minHp,
+        heightRange: state.heightRange,
+        weightRange: state.weightRange,
+        selectedRegion: state.selectedRegion,
+        showFavoritesOnly: state.showFavoritesOnly,
+        sortBy: state.sortBy,
+        compareList: state.compareList,
+        team: state.team,
+        history: state.history,
+        badges: state.badges,
+        quizHighScores: state.quizHighScores,
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
+        soundEnabled: state.soundEnabled,
+        theme: state.theme,
+        language: state.language,
+      }),
     }
   )
 );

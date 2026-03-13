@@ -5,7 +5,7 @@ import { Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/lib/i18n';
 
 export default function SearchBar() {
   const { searchTerm, setSearchTerm } = usePokedexStore();
@@ -58,7 +58,7 @@ export default function SearchBar() {
         <Input
           ref={inputRef}
           type="text"
-          placeholder={mounted ? t('search.placeholder') : 'Search Pokémon...'}
+          placeholder={t('search.placeholder')}
           value={mounted ? localSearch : ''}
           onChange={(e) => setLocalSearch(e.target.value)}
           className="w-full pl-12 pr-12 py-7 rounded-full bg-secondary/30 backdrop-blur-xl border border-white/20 dark:border-white/10 text-foreground placeholder:text-foreground/40 text-lg font-medium shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/50"
@@ -78,7 +78,7 @@ export default function SearchBar() {
               setSearchTerm('');
             }}
             className="absolute right-6 p-2 rounded-full text-foreground/40 hover:text-primary hover:bg-primary/10 transition-colors focus:outline-none"
-            aria-label="Clear search"
+            aria-label={t('search.clear')}
           >
             <X className="w-5 h-5" />
           </motion.button>
@@ -87,3 +87,4 @@ export default function SearchBar() {
     </motion.div>
   );
 }
+

@@ -7,12 +7,14 @@ import { formatId } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/i18n';
 
 import Image from 'next/image';
 
 export default function RecentlyViewed() {
   const { history, clearHistory } = usePokedexStore();
   const [mounted, setMounted] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 0);
@@ -29,8 +31,10 @@ export default function RecentlyViewed() {
             <History className="w-5 h-5 text-foreground/60" />
           </div>
           <div>
-            <h3 className="text-xl font-black uppercase tracking-tight">Recently Viewed</h3>
-            <p className="text-[10px] text-foreground/40 font-bold uppercase tracking-widest mt-0.5">Your last {history.length} explorations</p>
+            <h3 className="text-xl font-black uppercase tracking-tight">{t('recently_viewed.title')}</h3>
+            <p className="text-[10px] text-foreground/40 font-bold uppercase tracking-widest mt-0.5">
+              {t('recently_viewed.subtitle', { count: history.length })}
+            </p>
           </div>
         </div>
         <Button 
@@ -38,8 +42,9 @@ export default function RecentlyViewed() {
           size="sm" 
           onClick={clearHistory}
           className="text-[10px] font-black uppercase tracking-widest text-foreground/30 hover:text-destructive transition-colors"
+          aria-label={t('recently_viewed.clear')}
         >
-          <Trash2 className="w-3.5 h-3.5 mr-2" /> Clear
+          <Trash2 className="w-3.5 h-3.5 mr-2" /> {t('recently_viewed.clear')}
         </Button>
       </div>
 
@@ -57,6 +62,7 @@ export default function RecentlyViewed() {
                   alt={p.name} 
                   width={48}
                   height={48}
+                  sizes="48px"
                   className="w-full h-full object-contain relative z-10 filter drop-shadow-sm"
                 />
               </div>

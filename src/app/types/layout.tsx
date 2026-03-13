@@ -1,8 +1,9 @@
 import { Metadata } from 'next';
+import { t } from '@/lib/server-i18n';
 
 export const metadata: Metadata = {
-  title: "Type Master — Learn Pokémon Type Matchups",
-  description: "Master Pokémon type advantages, weaknesses, and resistances. Explore emblematic Pokémon for each type.",
+  title: t('meta.types_title'),
+  description: t('meta.types_description'),
 };
 
 export default function TypesLayout({

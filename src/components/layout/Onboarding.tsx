@@ -2,16 +2,16 @@
 
 import React, { useState } from 'react';
 import { usePokedexStore } from '@/store/pokedex';
-import { 
-  Dialog, 
-  DialogContent, 
+import {
+  Dialog,
+  DialogContent,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useTranslation } from 'react-i18next';
-import { 
-  Search, 
-  BarChart3, 
-  Users, 
+import { useTranslation } from '@/lib/i18n';
+import {
+  Search,
+  BarChart3,
+  Users,
   Gamepad2,
   ChevronRight,
   ChevronLeft,
@@ -29,28 +29,28 @@ export function Onboarding() {
 
   const steps = [
     {
-      title: "Bienvenue sur le Pokédex !",
-      desc: "Explorez le monde des Pokémon avec des outils avancés.",
+      title: t('onboarding.steps.welcome.title'),
+      desc: t('onboarding.steps.welcome.desc'),
       icon: <Search className="w-12 h-12 text-primary" />,
     },
     {
-      title: "Filtres Avancés",
-      desc: "Utilisez les filtres pour trouver exactement ce que vous cherchez par type, génération, et plus encore.",
+      title: t('onboarding.steps.filters.title'),
+      desc: t('onboarding.steps.filters.desc'),
       icon: <LayoutGridIcon className="w-12 h-12 text-blue-500" />,
     },
     {
-      title: "Team Builder",
-      desc: "Créez votre équipe idéale et analysez ses forces et faiblesses.",
+      title: t('onboarding.steps.team.title'),
+      desc: t('onboarding.steps.team.desc'),
       icon: <Users className="w-12 h-12 text-green-500" />,
     },
     {
-      title: "Comparaison",
-      desc: "Comparez jusqu'à 3 Pokémon pour voir leurs différences de stats.",
+      title: t('onboarding.steps.compare.title'),
+      desc: t('onboarding.steps.compare.desc'),
       icon: <BarChart3 className="w-12 h-12 text-yellow-500" />,
     },
     {
-      title: "Mini-Jeux",
-      desc: "Testez vos connaissances avec nos différents modes de Quiz.",
+      title: t('onboarding.steps.quiz.title'),
+      desc: t('onboarding.steps.quiz.desc'),
       icon: <Gamepad2 className="w-12 h-12 text-purple-500" />,
     },
   ];
@@ -84,7 +84,7 @@ export function Onboarding() {
               <div className="p-6 bg-secondary/30 rounded-3xl border border-white/5 shadow-inner">
                 {steps[step].icon}
               </div>
-              
+
               <div className="space-y-2">
                 <h3 className="text-2xl font-black tracking-tight">{steps[step].title}</h3>
                 <p className="text-foreground/60 font-medium leading-relaxed">
@@ -96,29 +96,29 @@ export function Onboarding() {
 
           <div className="flex justify-center gap-1.5 mt-10">
             {steps.map((_, i) => (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 className={cn(
-                  "h-1.5 rounded-full transition-all duration-300", 
-                  i === step ? "w-8 bg-primary" : "w-1.5 bg-foreground/10"
-                )} 
+                  'h-1.5 rounded-full transition-all duration-300',
+                  i === step ? 'w-8 bg-primary' : 'w-1.5 bg-foreground/10'
+                )}
               />
             ))}
           </div>
         </div>
 
         <div className="p-6 bg-secondary/20 border-t border-white/5 flex justify-between items-center">
-          <Button 
-            variant="ghost" 
-            onClick={handlePrev} 
+          <Button
+            variant="ghost"
+            onClick={handlePrev}
             disabled={step === 0}
             className="rounded-xl font-black uppercase tracking-widest text-[10px]"
           >
             <ChevronLeft className="w-4 h-4 mr-2" />
             {t('common.prev')}
           </Button>
-          
-          <Button 
+
+          <Button
             onClick={handleNext}
             className="rounded-xl font-black uppercase tracking-widest text-[10px] px-6 h-10 shadow-lg shadow-primary/20"
           >

@@ -8,21 +8,9 @@ import { motion } from 'framer-motion';
 
 import Image from 'next/image';
 
-interface EvolutionChainProps {
-  url: string;
-}
-
-interface ChainLink {
-  species: { name: string; url: string };
-  evolves_to: ChainLink[];
-}
-
-interface ChainResponse {
-  chain: ChainLink;
-}
-
 import { usePokedexStore } from '@/store/pokedex';
 import { getPokemonDetail, getPokemonSpecies } from '@/lib/api';
+import { formatId } from '@/lib/utils';
 
 interface EvolutionChainProps {
   url: string;
@@ -42,13 +30,13 @@ function EvolutionItem({ name }: { name: string }) {
   const resolvedLang = language === 'auto' ? systemLanguage : language;
 
   const { data: pokemonData } = useQuery({
-    queryKey: ['pokemon-evolution-item', name],
+    queryKey: ['pokemon-evolution-item', name, resolvedLang],
     queryFn: () => getPokemonDetail(name),
     staleTime: Infinity,
   });
 
   const { data: speciesData } = useQuery({
-    queryKey: ['species-evolution-item', name],
+    queryKey: ['species-evolution-item', name, resolvedLang],
     queryFn: () => getPokemonSpecies(name),
     staleTime: Infinity,
   });
@@ -116,7 +104,6 @@ function ChainNode({ node }: { node: ChainLink }) {
   );
 }
 
-import { formatId } from '@/lib/utils';
 
 export function EvolutionChain({ url }: EvolutionChainProps) {
   const { data, isLoading } = useQuery({

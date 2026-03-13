@@ -1,8 +1,9 @@
 import { Metadata } from 'next';
+import { t } from '@/lib/server-i18n';
 
 export const metadata: Metadata = {
-  title: "Team Builder — Build Your Ultimate Squad",
-  description: "Create your ideal Pokémon team, analyze its strengths and weaknesses, and get suggestions for better coverage.",
+  title: t('meta.team_title'),
+  description: t('meta.team_description'),
 };
 
 export default function TeamLayout({

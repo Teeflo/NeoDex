@@ -8,7 +8,7 @@ import { Heart, ArrowLeftRight, Plus, Minus } from 'lucide-react';
 import { usePokedexStore } from '@/store/pokedex';
 import { cn, formatId } from '@/lib/utils';
 import Link from 'next/link';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/lib/i18n';
 import Image from 'next/image';
 import { SVGProps, memo, useCallback, useState, useEffect } from 'react';
 
@@ -49,7 +49,7 @@ export function PokemonCardSkeleton() {
 }
 
 export const PokemonCard = memo(function PokemonCard({ name, url, initialData }: PokemonCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [mounted, setMounted] = useState(false);
 
@@ -58,11 +58,19 @@ export const PokemonCard = memo(function PokemonCard({ name, url, initialData }:
     return () => clearTimeout(timer);
   }, []);
   
+  const store = usePokedexStore();
+  const language = store.language;
+  const systemLanguage = store.systemLanguage;
+
+  // Find localized name based on user selected language
+  // We use store values directly instead of waiting for mounted to avoid English flash
+  const resolvedLang = language === 'auto' ? systemLanguage : language;
+
   const { data, isLoading } = useQuery<{
     pokemon: Partial<PokemonDetail>;
     species?: Partial<PokemonSpecies>;
   }>({
-    queryKey: ['pokemon-card', name],
+    queryKey: ['pokemon-card', name, resolvedLang],
     queryFn: async () => {
       const speciesUrl = url.replace('/pokemon/', '/pokemon-species/');
       const [pokemonRes, speciesRes] = await Promise.all([
@@ -74,43 +82,18 @@ export const PokemonCard = memo(function PokemonCard({ name, url, initialData }:
         species: speciesRes?.data as PokemonSpecies
       };
     },
-    initialData: initialData,
     staleTime: 10 * 60 * 1000,
-    enabled: !initialData,
+    // Only fetch if we don't have localized names in initialData
+    enabled: !initialData?.species?.names || initialData.species.names.length === 0,
   });
 
-  const displayData = initialData || data;
-  const pokemonId = displayData?.pokemon?.id || 0;
-
-  // Optimized selectors for better performance and reactivity
-  const store = usePokedexStore();
-  const isFav = mounted && store.favorites.includes(pokemonId);
-  const isComp = mounted && store.compareList.includes(pokemonId);
-  const isTeam = mounted && store.team.includes(pokemonId);
-  const caught = mounted && store.caughtPokemon.includes(pokemonId);
+  const displayData = data || initialData;
   
-  const teamFull = mounted && store.team.length >= 6;
-  const compareFull = mounted && store.compareList.length >= 3;
-  
-  const language = store.language;
-  const systemLanguage = store.systemLanguage;
-
-  const {
-    addFavorite,
-    removeFavorite,
-    addToCompare,
-    removeFromCompare,
-    addToTeam,
-    removeFromTeam,
-    toggleCaught
-  } = store;
-
   const prefetchDetails = useCallback(() => {
     if (!name) return;
-    // Prefetch both pokemon and species data for the detail page
     const speciesUrl = url.replace('/pokemon/', '/pokemon-species/');
     queryClient.prefetchQuery({
-      queryKey: ['pokemon-card', name],
+      queryKey: ['pokemon-card', name, resolvedLang],
       queryFn: async () => {
         const [pokemonRes, speciesRes] = await Promise.all([
           axios.get<PokemonDetail>(url),
@@ -123,7 +106,7 @@ export const PokemonCard = memo(function PokemonCard({ name, url, initialData }:
       },
       staleTime: 10 * 60 * 1000,
     });
-  }, [name, url, queryClient]);
+  }, [name, url, queryClient, resolvedLang]);
 
   if (isLoading && !displayData) {
     return <PokemonCardSkeleton />;
@@ -131,9 +114,26 @@ export const PokemonCard = memo(function PokemonCard({ name, url, initialData }:
 
   if (!displayData || !displayData.pokemon) return null;
   const { pokemon, species } = displayData;
+  const pokemonId = pokemon.id || 0;
 
-  // Use the derived pokemonId
+  const isFav = mounted && store.favorites.includes(pokemonId);
+  const isComp = mounted && store.compareList.includes(pokemonId);
+  const isTeam = mounted && store.team.includes(pokemonId);
+  const caught = mounted && store.caughtPokemon.includes(pokemonId);
   
+  const teamFull = mounted && store.team.length >= 6;
+  const compareFull = mounted && store.compareList.length >= 3;
+
+  const {
+    addFavorite,
+    removeFavorite,
+    addToCompare,
+    removeFromCompare,
+    addToTeam,
+    removeFromTeam,
+    toggleCaught
+  } = store;
+
   // Handle type data from both REST and GraphQL formats
   const gqlData = pokemon as unknown as { pokemon_v2_pokemontypes?: { pokemon_v2_type: { name: string } }[] };
   const types = pokemon.types || gqlData.pokemon_v2_pokemontypes?.map((t) => ({ type: { name: t.pokemon_v2_type.name } })) || [];
@@ -176,24 +176,30 @@ export const PokemonCard = memo(function PokemonCard({ name, url, initialData }:
     toggleCaught(pokemonId);
   };
 
-  // Find localized name based on user selected language, or fallback to english, then the default API name
-  const resolvedLang = mounted ? (language === 'auto' ? systemLanguage : language) : 'en';
-  
-  let displayName = pokemon.name!;
-  if (mounted && species?.names) {
-    const localizedNameEntry = species.names.find(n => n.language.name === resolvedLang) 
-      || species.names.find(n => n.language.name === 'en');
-    if (localizedNameEntry) displayName = localizedNameEntry.name;
-  } else if (mounted) {
+  // Improved name selection logic
+  const getLocalizedName = () => {
+    // 1. Try species.names from data or initialData
+    if (species?.names && species.names.length > 0) {
+      const entry = species.names.find(n => n.language.name === resolvedLang)
+        || species.names.find(n => n.language.name === 'en');
+      if (entry) return entry.name;
+    }
+
+    // 2. Try localizedNames from initialData (GraphQL format)
     const gqlSpeciesData = pokemon as unknown as { 
       localizedNames?: { language: string; name: string }[];
     };
-    if (gqlSpeciesData.localizedNames) {
-      const localizedNameEntry = gqlSpeciesData.localizedNames.find((n) => n.language === resolvedLang)
-        || gqlSpeciesData.localizedNames.find((n) => n.language === 'en');
-      if (localizedNameEntry) displayName = localizedNameEntry.name;
+    if (gqlSpeciesData.localizedNames && gqlSpeciesData.localizedNames.length > 0) {
+      const entry = gqlSpeciesData.localizedNames.find(n => n.language === resolvedLang)
+        || gqlSpeciesData.localizedNames.find(n => n.language === 'en');
+      if (entry) return entry.name;
     }
-  }
+
+    // 3. Fallback to API name (usually English)
+    return pokemon.name!;
+  };
+
+  const displayName = getLocalizedName();
 
   const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`;
 
@@ -222,7 +228,8 @@ export const PokemonCard = memo(function PokemonCard({ name, url, initialData }:
             "absolute bottom-6 left-6 z-20 transition-all duration-500 hover:scale-110 active:scale-90",
             caught ? "opacity-100 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" : "opacity-20 grayscale hover:opacity-50"
           )}
-          title={caught ? "Caught!" : "Mark as caught"}
+          title={caught ? t('card.caught') : t('card.mark_caught')}
+          aria-label={caught ? t('card.caught') : t('card.mark_caught')}
         >
           <PokeballIcon className={cn("w-6 h-6", caught ? "text-red-500" : "text-foreground")} />
         </button>
@@ -328,16 +335,16 @@ export const PokemonCard = memo(function PokemonCard({ name, url, initialData }:
           </h3>
 
           <div className="flex justify-center gap-2 flex-wrap mb-2">
-            {types.map((t: { type: { name: string } }) => (
+            {types.map((typeItem: { type: { name: string } }) => (
               <span
-                key={t.type.name}
+                key={typeItem.type.name}
                 className="glass-tag"
                 style={{ 
-                  backgroundColor: `${TYPE_COLORS[t.type.name]}cc`,
-                  borderColor: TYPE_COLORS[t.type.name]
+                  backgroundColor: `${TYPE_COLORS[typeItem.type.name]}cc`,
+                  borderColor: TYPE_COLORS[typeItem.type.name]
                 }}
               >
-                {t.type.name}
+                {t(`types.${typeItem.type.name}`)}
               </span>
             ))}
           </div>

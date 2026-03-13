@@ -4,7 +4,12 @@ import { getCachedData, setCachedData } from './cache';
 import { PokemonBasicData } from '@/types/pokemon';
 
 export const getAllPokemonDetailed = async () => {
-  const cacheKey = 'all-pokemon-detailed';
+  const cacheKey = 'all-pokemon-detailed-v5';
+  
+  // Check cache first
+  const cached = await getCachedData<PokemonBasicData[]>(cacheKey, true);
+  if (cached) return cached;
+
   try {
     const query = `
       query {
@@ -52,8 +57,8 @@ export const getAllPokemonDetailed = async () => {
     await setCachedData(cacheKey, results);
     return results;
   } catch (error) {
-    const cached = await getCachedData<PokemonBasicData[]>(cacheKey, true);
-    if (cached) return cached;
+    // If request fails but we have stale cache, it was already returned above.
+    // If we reach here, it means both failed.
     throw error;
   }
 };

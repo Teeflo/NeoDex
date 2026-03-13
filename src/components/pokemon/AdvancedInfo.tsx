@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { PokemonDetail, PokemonSpecies } from '@/types/pokemon';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/lib/i18n';
 import { 
   Dna, 
   Venus, 
@@ -39,7 +39,7 @@ export function AdvancedInfo({ pokemon, species }: AdvancedInfoProps) {
             <div className="flex flex-wrap gap-2">
               {species.egg_groups.map(group => (
                 <span key={group.name} className="px-3 py-1 bg-background/50 rounded-lg text-[11px] font-bold text-foreground/70 capitalize border border-white/5">
-                  {group.name}
+                  {t(`egg_groups.${group.name}`)}
                 </span>
               ))}
             </div>
@@ -100,10 +100,11 @@ export function AdvancedInfo({ pokemon, species }: AdvancedInfoProps) {
           </div>
           <div>
             <p className="text-[10px] text-foreground/40 font-bold uppercase tracking-widest mb-1">{t('detail.growth_rate')}</p>
-            <p className="text-xs font-black text-foreground/70 capitalize">{species.growth_rate.name.replace('-', ' ')}</p>
+            <p className="text-xs font-black text-foreground/70 capitalize">{t(`growth_rates.${species.growth_rate.name}`)}</p>
           </div>
         </div>
       </div>
     </div>
   );
 }
+

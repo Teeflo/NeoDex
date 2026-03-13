@@ -11,7 +11,7 @@ import { Loader2, RotateCcw, SearchX } from 'lucide-react';
 import { PokemonBasicData } from '@/types/pokemon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/lib/i18n';
 
 export default function PokemonList() {
   const { t } = useTranslation();
@@ -75,7 +75,7 @@ export default function PokemonList() {
     isFetchingNextPage,
     isLoading: isLoadingInfinite,
   } = useInfiniteQuery({
-    queryKey: pokemonKeys.lists(),
+    queryKey: pokemonKeys.lists(resolvedLang),
     queryFn: getPokemonList,
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextParam,
@@ -94,7 +94,7 @@ export default function PokemonList() {
 
   // 3. Mode Filtre par Génération
   const { data: genPokemon } = useQuery({
-    queryKey: ['genPokemon', selectedGeneration],
+    queryKey: ['genPokemon', selectedGeneration, resolvedLang],
     queryFn: () => (selectedGeneration ? getPokemonByGeneration(selectedGeneration.toString()) : Promise.resolve([])),
     enabled: !!selectedGeneration,
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
@@ -102,9 +102,8 @@ export default function PokemonList() {
 
   // 4. Mode Recherche ou Filtres Avancés : On récupère toutes les données de base pour filtrer/trier
   const { data: allDetailed } = useQuery({
-    queryKey: pokemonKeys.allDetailed(),
-    queryFn: getAllPokemonDetailed,
-    enabled: !isBasicMode,
+    queryKey: pokemonKeys.allDetailed(resolvedLang),
+    queryFn: () => getAllPokemonDetailed(),
     staleTime: 24 * 60 * 60 * 1000, // 24 hours
   });
 
@@ -151,28 +150,16 @@ export default function PokemonList() {
 
   // Logique de fusion des résultats
   const filteredAndSortedResults = useMemo(() => {
-    let results: {
-      name: string;
-      url: string;
-      height?: number;
-      weight?: number;
-      base_stat_total?: number;
-      stats?: number[];
-      is_legendary?: boolean;
-      is_mythical?: boolean;
-      id: number;
-      types?: string[];
-      egg_groups?: string[];
-      color?: string;
-      shape?: string;
-      localizedNames?: { language: string; name: string }[];
-    }[] = [];
+    let results: any[] = [];
 
     if (isBasicMode) {
-      results = infiniteData?.pages.flatMap((page) => page.results).map(p => ({
-        ...p,
-        id: parseInt(p.url.split('/').filter(Boolean).pop() || '0')
-      })) || [];
+      results = infiniteData?.pages.flatMap((page) => page.results).map(p => {
+        const id = parseInt(p.url.split('/').filter(Boolean).pop() || '0');
+        // Try to enrich basic REST data with localized GQL data
+        const detailed = transformedDetailed?.find(d => d.id === id);
+        if (detailed) return detailed;
+        return { ...p, id };
+      }) || [];
     } else {
       if (!transformedDetailed || transformedDetailed.length === 0) return [];
       results = [...transformedDetailed];
@@ -384,7 +371,7 @@ export default function PokemonList() {
       {!isBasicMode && (
         <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-2 bg-secondary/10 rounded-2xl border border-white/5 mx-2 mt-8">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-foreground/40">Results:</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-foreground/40">{t('list.results')}</span>
             <Badge variant="secondary" className="bg-primary/10 text-primary font-black border-none text-[10px]">
               {filteredAndSortedResults.length}
             </Badge>
@@ -396,7 +383,7 @@ export default function PokemonList() {
             className="h-7 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/10 hover:text-red-500 gap-1.5"
           >
             <RotateCcw className="w-3 h-3" />
-            Clear All
+            {t('filters.clear_all')}
           </Button>
         </div>
       )}
@@ -438,7 +425,11 @@ export default function PokemonList() {
                       is_legendary: p.is_legendary,
                       is_mythical: p.is_mythical,
                       color: { name: p.color || '' },
-                      egg_groups: p.egg_groups?.map(eg => ({ name: eg, url: '' })) || []
+                      egg_groups: p.egg_groups?.map(eg => ({ name: eg, url: '' })) || [],
+                      names: p.localizedNames?.map(ln => ({
+                        name: ln.name,
+                        language: { name: ln.language }
+                      }))
                     }
                   }}
                 />
@@ -471,7 +462,11 @@ export default function PokemonList() {
                     is_legendary: p.is_legendary,
                     is_mythical: p.is_mythical,
                     color: { name: p.color || '' },
-                    egg_groups: p.egg_groups?.map(eg => ({ name: eg, url: '' })) || []
+                    egg_groups: p.egg_groups?.map(eg => ({ name: eg, url: '' })) || [],
+                    names: p.localizedNames?.map(ln => ({
+                      name: ln.name,
+                      language: { name: ln.language }
+                    }))
                   }
                 }}
               />
@@ -493,3 +488,4 @@ export default function PokemonList() {
     </div>
   );
 }
+

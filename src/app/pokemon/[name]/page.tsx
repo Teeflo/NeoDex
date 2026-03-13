@@ -20,12 +20,13 @@ import {
   BrainCircuit,
   MapPin,
   Target,
-  SearchX
+  SearchX,
+  Sparkles
 } from 'lucide-react';
 import { PokemonEncounter, TYPE_COLORS } from '@/types/pokemon';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePokedexStore } from '@/store/pokedex';
-import { cn, formatId } from '@/lib/utils';
+import { cn, formatId, formatName } from '@/lib/utils';
 import React, { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
@@ -45,24 +46,10 @@ const HeightComparison = dynamic(() => import('@/components/pokemon/HeightCompar
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/lib/i18n';
 import { getLocalizedPokemonData } from '@/lib/api';
 
 import Image from 'next/image';
-
-const STAT_LABELS: Record<string, string> = {
-  'hp': 'HP',
-  'attack': 'ATK',
-  'defense': 'DEF',
-  'special-attack': 'SP.ATK',
-  'special-defense': 'SP.DEF',
-  'speed': 'SPD',
-};
-
-const HABITATS: Record<string, string> = {
-  cave: '🗿', forest: '🌲', grassland: '🌿', mountain: '🏔️',
-  rare: '⭐', 'rough-terrain': '🪨', sea: '🌊', urban: '🏙️', 'waters-edge': '🏞️'
-};
 
 const POKE_COLORS: Record<string, string> = {
   black: '#2E2E2E', blue: '#3B82F6', brown: '#92400E', gray: '#6B7280',
@@ -76,16 +63,35 @@ interface LocalizedGqlData {
 }
 
 export default function PokemonDetailPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const params = useParams();
   const name = params?.name as string;
   const router = useRouter();
   const [showShiny, setShowShiny] = useState(false);
   const [playingCry, setPlayingCry] = useState<'latest' | 'legacy' | null>(null);
   const { isFavorite, addFavorite, removeFavorite, addToHistory, language, systemLanguage } = usePokedexStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const resolvedLang = mounted 
+    ? (language === 'auto' ? systemLanguage : language) 
+    : i18n.language || 'en';
+
+  const statLabels: Record<string, string> = {
+    'hp': t('stats.hp_short'),
+    'attack': t('stats.attack_short'),
+    'defense': t('stats.defense_short'),
+    'special-attack': t('stats.special_attack_short'),
+    'special-defense': t('stats.special_defense_short'),
+    'speed': t('stats.speed_short'),
+  };
 
   const { data, isLoading } = useQuery({
-    queryKey: ['pokemon-full-detail', name],
+    queryKey: ['pokemon-full-detail', name, resolvedLang],
     queryFn: async () => {
       const langId = usePokedexStore.getState().getLanguageId();
       const [pokemon, species, localized] = await Promise.all([
@@ -159,7 +165,7 @@ export default function PokemonDetailPage() {
   const mainType = pokemon.types[0].type.name;
   const color = TYPE_COLORS[mainType] || '#A8A77A';
 
-  const resolvedLang = language === 'auto' ? systemLanguage : language;
+  const typeLabel = pokemon.types.map((typeItem) => t(`types.${typeItem.type.name}`)).join(' / ');
 
   const displayName = localized?.pokemon_v2_pokemonspeciesnames?.[0]?.name 
     || species?.names?.find(n => n.language.name === resolvedLang)?.name
@@ -192,8 +198,8 @@ export default function PokemonDetailPage() {
   };
 
   const handleShare = async () => {
-    const title = `Pokédex – ${displayName}`;
-    const text = `Découvre ${displayName} sur le Pokédex !`;
+    const title = t('detail.share_title', { name: displayName });
+    const text = t('detail.share_text', { name: displayName });
     const url = window.location.href;
 
     if (navigator.share) {
@@ -238,8 +244,8 @@ export default function PokemonDetailPage() {
             size="icon"
             onClick={() => router.push(`/quiz?pokemon=${pokemon.name}`)}
             className="rounded-full transition-all h-12 w-12 bg-secondary/30 border-white/10 text-foreground/80 hover:bg-purple-500/20 hover:text-purple-500 hover:border-purple-500/50"
-            title="Test my knowledge"
-            aria-label="Test my knowledge about this Pokémon"
+            title={t('detail.test_knowledge')}
+            aria-label={t('detail.test_knowledge_aria', { name: displayName })}
           >
             <BrainCircuit className="w-5 h-5" />
           </Button>
@@ -314,6 +320,7 @@ export default function PokemonDetailPage() {
               alt={displayName}
               width={400}
               height={400}
+              sizes="(min-width: 768px) 384px, 288px"
               className="w-full h-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative z-10 transition-transform duration-700 group-hover:scale-110 group-hover:-translate-y-4"
               priority
             />
@@ -338,17 +345,19 @@ export default function PokemonDetailPage() {
               <div className="flex gap-2 flex-wrap justify-center">
                 {species.habitat ? (
                   <p className="text-xs text-foreground/40 font-semibold uppercase tracking-widest bg-secondary/40 px-3 py-1 rounded-full border border-white/5 flex items-center gap-2">
-                    <span>{HABITATS[species.habitat.name] || '🌍'}</span> {species.habitat.name}
+                    <MapPin className="w-3 h-3" />
+                    <span>{t(`habitats.${species.habitat.name}`)}</span>
                   </p>
                 ) : (
                   <p className="text-xs text-foreground/40 font-semibold uppercase tracking-widest bg-secondary/40 px-3 py-1 rounded-full border border-white/5 flex items-center gap-2">
-                    <span>🌍</span> {t('detail.unknown_habitat')}
+                    <MapPin className="w-3 h-3" />
+                    <span>{t('detail.unknown_habitat')}</span>
                   </p>
                 )}
                 {species.color && POKE_COLORS[species.color.name] && (
                   <div className="flex items-center gap-2 text-xs text-foreground/40 font-semibold uppercase tracking-widest bg-secondary/40 px-3 py-1 rounded-full border border-white/5">
                     <div className="w-3 h-3 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: POKE_COLORS[species.color.name] }} />
-                    <span>{species.color.name}</span>
+                    <span>{t(`colors.${species.color.name}`)}</span>
                   </div>
                 )}
                 {species.is_legendary && (
@@ -366,16 +375,16 @@ export default function PokemonDetailPage() {
           )}
 
           <div className="flex gap-3 justify-center flex-wrap">
-            {pokemon.types.map((t) => (
+            {pokemon.types.map((typeItem) => (
               <span
-                key={t.type.name}
+                key={typeItem.type.name}
                 className="glass-tag px-6 py-2 text-sm shadow-lg"
                 style={{ 
-                  backgroundColor: `${TYPE_COLORS[t.type.name]}dd`,
-                  borderColor: TYPE_COLORS[t.type.name]
+                  backgroundColor: `${TYPE_COLORS[typeItem.type.name]}dd`,
+                  borderColor: TYPE_COLORS[typeItem.type.name]
                 }}
               >
-                {t.type.name}
+                {t(`types.${typeItem.type.name}`)}
               </span>
             ))}
           </div>
@@ -389,7 +398,7 @@ export default function PokemonDetailPage() {
                   onClick={() => playCry('latest')}
                   className={cn("rounded-full gap-2 transition-all", playingCry === 'latest' && "border-primary text-primary bg-primary/10")}
                 >
-                  {playingCry === 'latest' ? <Volume2 className="w-4 h-4 animate-pulse" /> : <Play className="w-4 h-4" />} 🔊 {t('detail.cry_latest')}
+                  {playingCry === 'latest' ? <Volume2 className="w-4 h-4 animate-pulse" /> : <Play className="w-4 h-4" />} {t('detail.cry_latest')}
                 </Button>
               )}
               {pokemon.cries.legacy && (
@@ -398,7 +407,7 @@ export default function PokemonDetailPage() {
                   onClick={() => playCry('legacy')}
                   className={cn("rounded-full gap-2 transition-all", playingCry === 'legacy' && "border-primary text-primary bg-primary/10")}
                 >
-                  {playingCry === 'legacy' ? <Volume2 className="w-4 h-4 animate-pulse" /> : <Play className="w-4 h-4" />} 🔊 {t('detail.cry_legacy')}
+                  {playingCry === 'legacy' ? <Volume2 className="w-4 h-4 animate-pulse" /> : <Play className="w-4 h-4" />} {t('detail.cry_legacy')}
                 </Button>
               )}
             </div>
@@ -416,11 +425,11 @@ export default function PokemonDetailPage() {
             <TabsList className="grid w-full grid-cols-4 md:grid-cols-7 mb-8 h-auto md:h-14 rounded-2xl bg-secondary/30 p-1 border border-white/5 gap-1">
               <TabsTrigger value="about" className="rounded-xl font-bold uppercase tracking-wider text-[9px] md:text-xs py-2 md:py-0">{t('detail.about')}</TabsTrigger>
               <TabsTrigger value="stats" className="rounded-xl font-bold uppercase tracking-wider text-[9px] md:text-xs py-2 md:py-0">{t('detail.stats')}</TabsTrigger>
-              <TabsTrigger value="moves" className="rounded-xl font-bold uppercase tracking-wider text-[9px] md:text-xs py-2 md:py-0">{t('detail.moveset') || 'Moves'}</TabsTrigger>
+              <TabsTrigger value="moves" className="rounded-xl font-bold uppercase tracking-wider text-[9px] md:text-xs py-2 md:py-0">{t('detail.moveset')}</TabsTrigger>
               <TabsTrigger value="evolution" className="rounded-xl font-bold uppercase tracking-wider text-[9px] md:text-xs py-2 md:py-0">{t('detail.evolution')}</TabsTrigger>
-              <TabsTrigger value="locations" className="rounded-xl font-bold uppercase tracking-wider text-[9px] md:text-xs py-2 md:py-0">{t('detail.where_to_find') || 'Locations'}</TabsTrigger>
-              <TabsTrigger value="builds" className="rounded-xl font-bold uppercase tracking-wider text-[9px] md:text-xs py-2 md:py-0">Builds</TabsTrigger>
-              <TabsTrigger value="infos" className="rounded-xl font-bold uppercase tracking-wider text-[9px] md:text-xs py-2 md:py-0">{t('detail.infos') || 'Infos'}</TabsTrigger>
+              <TabsTrigger value="locations" className="rounded-xl font-bold uppercase tracking-wider text-[9px] md:text-xs py-2 md:py-0">{t('detail.where_to_find')}</TabsTrigger>
+              <TabsTrigger value="builds" className="rounded-xl font-bold uppercase tracking-wider text-[9px] md:text-xs py-2 md:py-0">{t('detail.builds')}</TabsTrigger>
+              <TabsTrigger value="infos" className="rounded-xl font-bold uppercase tracking-wider text-[9px] md:text-xs py-2 md:py-0">{t('detail.infos')}</TabsTrigger>
             </TabsList>
             
             {/* About Tab */}
@@ -431,7 +440,7 @@ export default function PokemonDetailPage() {
                   <div className="h-24 animate-pulse bg-white/5 rounded-2xl" />
                 ) : (
                   <p className="text-base text-foreground/70 leading-relaxed font-medium">
-                    {flavorText || "No description available."}
+                    {flavorText || t('detail.no_description')}
                   </p>
                 )}
 
@@ -445,6 +454,25 @@ export default function PokemonDetailPage() {
                     <Ruler className="w-5 h-5 text-foreground/40 mb-2 group-hover:text-primary transition-colors" />
                     <p className="text-[10px] text-foreground/50 uppercase font-bold tracking-widest mb-1">{t('detail.height')}</p>
                     <p className="text-lg font-black text-foreground/90">{pokemon.height / 10} m</p>
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-6 border-t border-white/10">
+                  <h4 className="text-[10px] text-foreground/40 font-bold uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" /> {t('detail.abilities')}
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {pokemon.abilities.map((a) => (
+                      <div key={a.ability.name} className="flex items-center justify-between p-4 bg-secondary/20 border border-white/5 rounded-2xl">
+                        <div className="flex flex-col">
+                          <span className="font-black text-sm text-foreground/80 capitalize">{formatName(a.ability.name)}</span>
+                          {a.is_hidden && <span className="text-[9px] font-black text-primary uppercase tracking-tighter">{t('detail.hidden')}</span>}
+                        </div>
+                        <div className="px-2 py-1 bg-background/40 rounded-lg text-[9px] font-bold text-foreground/40 uppercase tracking-widest border border-white/5">
+                          {t('detail.infos')}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -480,7 +508,7 @@ export default function PokemonDetailPage() {
                   {pokemon.stats.map((s) => (
                     <div key={s.stat.name} className="flex items-center gap-4 group">
                       <span className="w-16 font-bold uppercase text-foreground/50 text-xs tracking-wider group-hover:text-foreground/80 transition-colors">
-                        {STAT_LABELS[s.stat.name] || s.stat.name}
+                        {statLabels[s.stat.name] || s.stat.name}
                       </span>
                       <span className="w-10 font-black text-right text-foreground/90 tabular-nums">
                         {s.base_stat}
@@ -522,12 +550,12 @@ export default function PokemonDetailPage() {
                     {effectiveness.weaknesses.length > 0 && (
                       <div>
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500/60 mb-4 flex items-center gap-2">
-                          <ShieldAlert className="w-3 h-3" /> {t('detail.weaknesses')}
+                          <ShieldAlert className="w-3 h-3" /> {t('detail.receives_double')}
                         </h4>
                         <div className="flex flex-wrap gap-2">
                           {effectiveness.weaknesses.map(([type, multiplier]) => (
                             <div key={type} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/5 bg-secondary/20">
-                              <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: TYPE_COLORS[type] }}>{type}</span>
+                              <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: TYPE_COLORS[type] }}>{t(`types.${type}`)}</span>
                               <span className="text-[9px] font-black opacity-40">x{multiplier}</span>
                             </div>
                           ))}
@@ -538,13 +566,19 @@ export default function PokemonDetailPage() {
                     {effectiveness.resistances.length > 0 && (
                       <div>
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-green-500/60 mb-4 flex items-center gap-2">
-                          <ShieldCheck className="w-3 h-3" /> {t('detail.resistances')}
+                          <ShieldCheck className="w-3 h-3" /> {t('detail.resists_damage')}
                         </h4>
                         <div className="flex flex-wrap gap-2">
                           {effectiveness.resistances.map(([type, multiplier]) => (
                             <div key={type} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/5 bg-secondary/20">
-                              <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: TYPE_COLORS[type] }}>{type}</span>
+                              <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: TYPE_COLORS[type] }}>{t(`types.${type}`)}</span>
                               <span className="text-[9px] font-black opacity-40">x{multiplier}</span>
+                            </div>
+                          ))}
+                          {effectiveness.immunities.map(([type]) => (
+                            <div key={type} className="flex items-center justify-between p-2 rounded-xl bg-background/40 border border-blue-500/20">
+                              <span className="text-[10px] font-bold uppercase truncate" style={{ color: TYPE_COLORS[type] }}>{t(`types.${type}`)}</span>
+                              <span className="text-[9px] font-black text-blue-400">{t('detail.immune')}</span>
                             </div>
                           ))}
                         </div>
@@ -559,7 +593,7 @@ export default function PokemonDetailPage() {
                         <div className="flex flex-wrap gap-2">
                           {effectiveness.immunities.map(([type]) => (
                             <div key={type} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/5 bg-secondary/20">
-                              <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: TYPE_COLORS[type] }}>{type}</span>
+                              <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: TYPE_COLORS[type] }}>{t(`types.${type}`)}</span>
                               <span className="text-[9px] font-black opacity-40">x0</span>
                             </div>
                           ))}
@@ -588,13 +622,13 @@ export default function PokemonDetailPage() {
                 <div className="glass-panel p-6 md:p-8 rounded-[2.5rem]">
                   <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
                     <h3 className="text-xl font-black text-foreground/90">{t('detail.main_moves')}</h3>
-                    <span className="px-2 py-1 bg-secondary/50 rounded-md text-xs font-bold text-foreground/60">{pokemon.moves.length} total</span>
+                    <span className="px-2 py-1 bg-secondary/50 rounded-md text-xs font-bold text-foreground/60">{t('detail.total_moves', { count: pokemon.moves.length })}</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {pokemon.moves.slice(0, 8).map((m) => (
                       <div key={m.move.name} className="flex items-center justify-between p-4 bg-secondary/20 border border-white/5 rounded-2xl group hover:border-primary/30 transition-all">
                         <span className="font-black text-sm text-foreground/80 capitalize">
-                          {m.move.name.replace('-', ' ')}
+                          {m.move.name.replace(/-/g, ' ')}
                         </span>
                         <div className="p-1.5 bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                           <Zap className="w-3.5 h-3.5 text-primary" />
@@ -618,55 +652,55 @@ export default function PokemonDetailPage() {
                   <div className="p-2 bg-purple-500/10 rounded-xl">
                     <BrainCircuit className="w-6 h-6 text-purple-500" />
                   </div>
-                  {t('detail.battle_guide') || 'Battle Guide'}
+                  {t('detail.battle_guide')}
                 </h3>
 
                 <div className="space-y-8">
                   <div className="bg-secondary/20 p-6 rounded-3xl border border-white/5">
                     <h4 className="text-sm font-black uppercase tracking-widest text-foreground/60 mb-4 flex items-center gap-2">
-                      <Swords className="w-4 h-4 text-primary" /> {t('detail.suggested_role') || 'Potential Roles'}
+                      <Swords className="w-4 h-4 text-primary" /> {t('detail.suggested_role')}
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {pokemon.stats.find(s => s.stat.name === 'speed')?.base_stat ? pokemon.stats.find(s => s.stat.name === 'speed')!.base_stat > 100 && (
                         <div className="p-4 bg-background/40 rounded-2xl border border-white/5">
-                          <p className="text-xs font-black text-primary uppercase mb-1">Fast Sweeper</p>
-                          <p className="text-[11px] text-foreground/50 leading-relaxed">Its high speed allows it to attack first and potentially KO opponents before they can react.</p>
+                          <p className="text-xs font-black text-primary uppercase mb-1">{t('detail.roles.fast_sweeper.title')}</p>
+                          <p className="text-[11px] text-foreground/50 leading-relaxed">{t('detail.roles.fast_sweeper.desc')}</p>
                         </div>
                       ) : null}
                       {((pokemon.stats.find(s => s.stat.name === 'attack')?.base_stat || 0) > 100 || (pokemon.stats.find(s => s.stat.name === 'special-attack')?.base_stat || 0) > 100) && (
                         <div className="p-4 bg-background/40 rounded-2xl border border-white/5">
-                          <p className="text-xs font-black text-red-500 uppercase mb-1">Wall Breaker</p>
-                          <p className="text-[11px] text-foreground/50 leading-relaxed">Possesses massive offensive power capable of punching holes through defensive teams.</p>
+                          <p className="text-xs font-black text-red-500 uppercase mb-1">{t('detail.roles.wall_breaker.title')}</p>
+                          <p className="text-[11px] text-foreground/50 leading-relaxed">{t('detail.roles.wall_breaker.desc')}</p>
                         </div>
                       )}
                       {((pokemon.stats.find(s => s.stat.name === 'defense')?.base_stat || 0) > 100 || (pokemon.stats.find(s => s.stat.name === 'special-defense')?.base_stat || 0) > 100) && (
                         <div className="p-4 bg-background/40 rounded-2xl border border-white/5">
-                          <p className="text-xs font-black text-blue-500 uppercase mb-1">Tank / Wall</p>
-                          <p className="text-[11px] text-foreground/50 leading-relaxed">High defensive stats make it excellent for soaking up hits and stalling the opponent.</p>
+                          <p className="text-xs font-black text-blue-500 uppercase mb-1">{t('detail.roles.tank.title')}</p>
+                          <p className="text-[11px] text-foreground/50 leading-relaxed">{t('detail.roles.tank.desc')}</p>
                         </div>
                       )}
                       <div className="p-4 bg-background/40 rounded-2xl border border-white/5">
-                        <p className="text-xs font-black text-green-500 uppercase mb-1">Strategic Use</p>
-                        <p className="text-[11px] text-foreground/50 leading-relaxed">Combine its types and abilities to find unique niches in your team composition.</p>
+                        <p className="text-xs font-black text-green-500 uppercase mb-1">{t('detail.roles.strategic.title')}</p>
+                        <p className="text-[11px] text-foreground/50 leading-relaxed">{t('detail.roles.strategic.desc')}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="bg-secondary/20 p-6 rounded-3xl border border-white/5">
                     <h4 className="text-sm font-black uppercase tracking-widest text-foreground/60 mb-6 flex items-center gap-2">
-                      <Target className="w-4 h-4 text-orange-500" /> Type Matchups
+                      <Target className="w-4 h-4 text-orange-500" /> {t('detail.type_matchups')}
                     </h4>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       {/* Weaknesses */}
                       <div className="space-y-4">
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500/60 flex items-center gap-2">
-                          <ShieldAlert className="w-3 h-3" /> Receives double damage from:
+                          <ShieldAlert className="w-3 h-3" /> {t('detail.receives_double')}
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {effectiveness?.weaknesses.map(([type, mult]) => (
                             <div key={type} className="flex items-center justify-between p-2 rounded-xl bg-background/40 border border-white/5">
-                              <span className="text-[10px] font-bold uppercase truncate" style={{ color: TYPE_COLORS[type] }}>{type}</span>
+                              <span className="text-[10px] font-bold uppercase truncate" style={{ color: TYPE_COLORS[type] }}>{t(`types.${type}`)}</span>
                               <span className="text-[9px] font-black opacity-40">x{mult}</span>
                             </div>
                           ))}
@@ -676,19 +710,19 @@ export default function PokemonDetailPage() {
                       {/* Resistances */}
                       <div className="space-y-4">
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-green-500/60 flex items-center gap-2">
-                          <ShieldCheck className="w-3 h-3" /> Resists damage from:
+                          <ShieldCheck className="w-3 h-3" /> {t('detail.resists_damage')}
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {effectiveness?.resistances.map(([type, mult]) => (
                             <div key={type} className="flex items-center justify-between p-2 rounded-xl bg-background/40 border border-white/5">
-                              <span className="text-[10px] font-bold uppercase truncate" style={{ color: TYPE_COLORS[type] }}>{type}</span>
+                              <span className="text-[10px] font-bold uppercase truncate" style={{ color: TYPE_COLORS[type] }}>{t(`types.${type}`)}</span>
                               <span className="text-[9px] font-black opacity-40">x{mult}</span>
                             </div>
                           ))}
                           {effectiveness?.immunities.map(([type]) => (
                             <div key={type} className="flex items-center justify-between p-2 rounded-xl bg-background/40 border border-blue-500/20">
-                              <span className="text-[10px] font-bold uppercase truncate" style={{ color: TYPE_COLORS[type] }}>{type}</span>
-                              <span className="text-[9px] font-black text-blue-400">Immune</span>
+                              <span className="text-[10px] font-bold uppercase truncate" style={{ color: TYPE_COLORS[type] }}>{t(`types.${type}`)}</span>
+                              <span className="text-[9px] font-black text-blue-400">{t('detail.immune')}</span>
                             </div>
                           ))}
                         </div>
@@ -698,36 +732,35 @@ export default function PokemonDetailPage() {
 
                   <div className="bg-secondary/20 p-6 rounded-3xl border border-white/5">
                     <h4 className="text-sm font-black uppercase tracking-widest text-foreground/60 mb-4 flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-yellow-500" /> {t('detail.type_synergy') || 'Type Synergy'}
+                      <Zap className="w-4 h-4 text-yellow-500" /> {t('detail.type_synergy')}
                     </h4>
                     <p className="text-xs text-foreground/50 leading-relaxed mb-4">
-                      {displayName} is a {pokemon.types.map(t => t.type.name).join('/')} type Pokémon. 
-                      Understanding how these types interact with others is key to winning battles.
+                      {t('detail.type_synergy_desc', { name: displayName, types: typeLabel })}
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-3">Offensive Tips</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-3">{t('detail.offensive_tips')}</p>
                         <ul className="space-y-2">
                           <li className="text-[11px] text-foreground/60 flex items-start gap-2">
                             <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
-                            <span>Use same-type attacks (STAB) for 50% more damage.</span>
+                            <span>{t('detail.offensive_tip_1')}</span>
                           </li>
                           <li className="text-[11px] text-foreground/60 flex items-start gap-2">
                             <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
-                            <span>Target weaknesses to deal double or quadruple damage.</span>
+                            <span>{t('detail.offensive_tip_2')}</span>
                           </li>
                         </ul>
                       </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-3">Defensive Tips</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-foreground/40 mb-3">{t('detail.defensive_tips')}</p>
                         <ul className="space-y-2">
                           <li className="text-[11px] text-foreground/60 flex items-start gap-2">
                             <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
-                            <span>Switch to a teammate when facing a type you are weak to.</span>
+                            <span>{t('detail.defensive_tip_1')}</span>
                           </li>
                           <li className="text-[11px] text-foreground/60 flex items-start gap-2">
                             <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
-                            <span>Leverage immunities to completely avoid certain attacks.</span>
+                            <span>{t('detail.defensive_tip_2')}</span>
                           </li>
                         </ul>
                       </div>
@@ -744,7 +777,7 @@ export default function PokemonDetailPage() {
                   <div className="p-2 bg-primary/10 rounded-xl">
                     <Zap className="w-6 h-6 text-primary" />
                   </div>
-                  {t('detail.moveset') || 'Moveset'}
+                  {t('detail.moveset')}
                 </h3>
 
                 <div className="grid grid-cols-1 gap-4">
@@ -763,18 +796,18 @@ export default function PokemonDetailPage() {
                     return (
                       <div key={method} className="space-y-4">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40 mt-4 mb-2">
-                          {method === 'level-up' ? 'Level Up' : method === 'machine' ? 'TM/HM' : method === 'egg' ? 'Egg Moves' : 'Tutor'}
+                          {method === 'level-up' ? t('detail.move_method.level_up') : method === 'machine' ? t('detail.move_method.machine') : method === 'egg' ? t('detail.move_method.egg') : t('detail.move_method.tutor')}
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {methodMoves.map((m) => (
                             <div key={m.move.name} className="flex items-center justify-between p-4 bg-secondary/20 border border-white/5 rounded-2xl group hover:border-primary/30 transition-all">
-                              <div className="flex flex-col">
+                              <div className="flex flex-col gap-1">
                                 <span className="font-black text-sm text-foreground/80 capitalize">
-                                  {m.move.name.replace(/-/g, ' ')}
+                                  {formatName(m.move.name)}
                                 </span>
                                 {method === 'level-up' && (
                                   <span className="text-[10px] font-bold text-primary/60">
-                                    Level {m.version_group_details.find(d => d.move_learn_method.name === method)?.level_learned_at}
+                                    {t('detail.level', { level: m.version_group_details.find(d => d.move_learn_method.name === method)?.level_learned_at || 1 })}
                                   </span>
                                 )}
                               </div>
@@ -798,7 +831,7 @@ export default function PokemonDetailPage() {
                   <div className="p-2 bg-green-500/10 rounded-xl">
                     <MapPin className="w-6 h-6 text-green-500" />
                   </div>
-                  {t('detail.where_to_find') || 'Where to Find'}
+                  {t('detail.where_to_find')}
                 </h3>
 
                 {encounters && encounters.length > 0 ? (
@@ -810,7 +843,7 @@ export default function PokemonDetailPage() {
                             <MapPin className="w-4 h-4 text-primary" />
                           </div>
                           <span className="font-black text-base text-foreground/80 capitalize">
-                            {enc.location_area.name.replace(/-/g, ' ')}
+                            {formatName(enc.location_area.name)}
                           </span>
                         </div>
                         
@@ -819,7 +852,7 @@ export default function PokemonDetailPage() {
                             <div key={vi} className="p-3 bg-background/40 rounded-2xl border border-white/5 flex flex-col gap-1">
                               <span className="text-[10px] font-black uppercase text-primary/60">{vd.version.name}</span>
                               <div className="flex justify-between items-center">
-                                <span className="text-xs font-bold">Chance</span>
+                                <span className="text-xs font-bold">{t('detail.encounter_chance')}</span>
                                 <span className="text-xs font-black text-foreground/90">{vd.max_chance}%</span>
                               </div>
                             </div>
@@ -833,8 +866,8 @@ export default function PokemonDetailPage() {
                     <div className="p-4 bg-secondary/30 rounded-full mb-4">
                       <SearchX className="w-10 h-10 text-foreground/20" />
                     </div>
-                    <p className="text-foreground/50 font-bold uppercase tracking-widest text-sm">{t('detail.no_location') || 'No specific location data found'}</p>
-                    <p className="text-[10px] text-foreground/30 mt-2 max-w-xs uppercase">This Pokémon might be found through evolution, special events, or in regions not yet fully mapped.</p>
+                    <p className="text-foreground/50 font-bold uppercase tracking-widest text-sm">{t('detail.no_location')}</p>
+                    <p className="text-[10px] text-foreground/30 mt-2 max-w-xs uppercase">{t('detail.no_location_desc')}</p>
                   </div>
                 )}
               </div>

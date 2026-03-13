@@ -3,28 +3,33 @@
 import { usePokedexStore } from '@/store/pokedex';
 import { X, Volume2, VolumeX, Sun, Moon, Monitor, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-import { useTranslation } from 'react-i18next';
-
-const LANGUAGES = [
-  { code: 'auto', name: 'Auto', flag: '🌐' },
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
-  { code: 'ja', name: '日本語', flag: '🇯🇵' },
-  { code: 'ko', name: '한국어', flag: '🇰🇷' },
-];
+import { useTranslation } from '@/lib/i18n';
 
 export default function SettingsModal() {
-  const { isSettingsOpen, toggleSettings, soundEnabled, toggleSound, theme, setTheme, language, setLanguage } = usePokedexStore();
-  const { t } = useTranslation();
+  const { isSettingsOpen, toggleSettings, soundEnabled, toggleSound, theme, setTheme, language, setLanguage, systemLanguage } = usePokedexStore();
+  const { t, i18n } = useTranslation();
 
   const themeOptions = [
     { value: 'light' as const, label: t('settings.light'), icon: Sun },
     { value: 'dark' as const, label: t('settings.dark'), icon: Moon },
     { value: 'system' as const, label: t('settings.system'), icon: Monitor },
+  ];
+
+  const handleLanguageChange = (code: string) => {
+    setLanguage(code);
+    const resolvedLang = code === 'auto' ? systemLanguage : code;
+    i18n.changeLanguage(resolvedLang);
+  };
+
+  const languageOptions = [
+    { code: 'auto', name: t('languages.auto'), flag: '🌐' },
+    { code: 'en', name: t('languages.en'), flag: '🇺🇸' },
+    { code: 'fr', name: t('languages.fr'), flag: '🇫🇷' },
+    { code: 'de', name: t('languages.de'), flag: '🇩🇪' },
+    { code: 'es', name: t('languages.es'), flag: '🇪🇸' },
+    { code: 'it', name: t('languages.it'), flag: '🇮🇹' },
+    { code: 'ja', name: t('languages.ja'), flag: '🇯🇵' },
+    { code: 'ko', name: t('languages.ko'), flag: '🇰🇷' },
   ];
 
   return (
@@ -36,19 +41,19 @@ export default function SettingsModal() {
           aria-modal="true"
           aria-label={t('settings.title')}
         >
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={toggleSettings}
           />
-          
+
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
             className="glass-panel relative w-full max-w-sm rounded-[2rem] p-8 overflow-hidden"
           >
@@ -60,7 +65,8 @@ export default function SettingsModal() {
               <button
                 onClick={toggleSettings}
                 className="p-2 rounded-full text-foreground/50 hover:bg-white/10 hover:text-foreground transition-colors"
-                aria-label="Close settings"
+                aria-label={t('settings.close')}
+                title={t('settings.close')}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -78,7 +84,7 @@ export default function SettingsModal() {
                 <button
                   onClick={toggleSound}
                   className={`relative w-14 h-7 rounded-full transition-colors duration-300 ${soundEnabled ? 'bg-primary' : 'bg-white/10'}`}
-                  aria-label={soundEnabled ? 'Disable sound' : 'Enable sound'}
+                  aria-label={soundEnabled ? t('settings.sound_disable') : t('settings.sound_enable')}
                   role="switch"
                   aria-checked={soundEnabled}
                 >
@@ -100,8 +106,8 @@ export default function SettingsModal() {
                       key={value}
                       onClick={() => setTheme(value)}
                       className={`flex-1 flex flex-col items-center gap-2 py-3 px-2 rounded-xl text-xs font-bold transition-all duration-300 ${theme === value
-                          ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                          : 'text-foreground/50 hover:bg-white/5 hover:text-foreground/80'
+                        ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                        : 'text-foreground/50 hover:bg-white/5 hover:text-foreground/80'
                         }`}
                       aria-pressed={theme === value}
                     >
@@ -121,14 +127,16 @@ export default function SettingsModal() {
                   <span className="font-bold text-foreground/80">{t('settings.language')}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 bg-secondary/20 p-2 rounded-2xl border border-white/5">
-                  {LANGUAGES.map((lang) => (
+                  {languageOptions.map((lang) => (
                     <button
                       key={lang.code}
-                      onClick={() => setLanguage(lang.code)}
+                      onClick={() => handleLanguageChange(lang.code)}
                       className={`flex items-center justify-center gap-2 py-2 px-2 rounded-xl text-xs font-bold transition-all duration-300 ${language === lang.code
-                          ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                          : 'text-foreground/50 hover:bg-white/5 hover:text-foreground/80'
+                        ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                        : 'text-foreground/50 hover:bg-white/5 hover:text-foreground/80'
                         }`}
+                      title={lang.name}
+                      aria-label={t('settings.language_option', { language: lang.name })}
                     >
                       <span className="text-base leading-none">{lang.flag}</span>
                       <span className="uppercase">{lang.code === 'auto' ? t('settings.auto') : lang.code}</span>
@@ -139,7 +147,7 @@ export default function SettingsModal() {
 
               <div className="mt-8 pt-6 border-t border-white/5 text-center">
                 <p className="text-[10px] text-foreground/30 font-bold tracking-[0.2em] uppercase">
-                  Pokédex Redesign v3.0
+                  {t('settings.version')}
                 </p>
               </div>
             </div>
